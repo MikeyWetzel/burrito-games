@@ -168,7 +168,9 @@
   function buzz(ms) { if (navigator.vibrate) try { navigator.vibrate(ms); } catch (e) { } }
 
   /* ---------- game state ---------- */
-  var GRAV = 0.25, FLAP = -3.9, MAXV = 8;
+  // Additive tap impulse (old: set vy = -3.9 per flap). Each tap adds TAP (~45% of old) to vy,
+  // after softening any fall to FALL_SOFT so taps bite while dropping; upward speed capped at UP_CAP.
+  var GRAV = 0.25, TAP = -1.75, FALL_SOFT = 1.5, UP_CAP = -3.4, MAXV = 8, FLAP = TAP;
   var state, bird, pipes, score, best = +localStorage.getItem('fb-best') || 0, groundOff = 0, frame = 0, flash = 0, overT = 0, isNewBest = false;
   function reset() {
     state = 'ready'; score = 0; pipes = []; frame = 0; overT = 0; isNewBest = false;
@@ -177,7 +179,7 @@
   function spawnPipe(x) { pipes.push({ x: x, gapY: 30 + Math.floor(Math.random() * (GROUND_Y - GAP - 70)), scored: false }); }
   function flap() {
     if (state === 'ready') { state = 'play'; spawnPipe(LW + 40); spawnPipe(LW + 40 + PIPE_SPACING); }
-    if (state === 'play') { bird.vy = FLAP; sfx.wing(); }
+    if (state === 'play') { bird.vy = Math.max(UP_CAP, Math.min(bird.vy, FALL_SOFT) + TAP); sfx.wing(); }
   }
   function die() {
     if (state === 'dead' || state === 'over') return;

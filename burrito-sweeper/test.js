@@ -26,20 +26,24 @@ for (const [w, h, m] of [[9, 9, 10], [16, 16, 40], [30, 16, 99]]) {
   }
 }
 
-// --- Marker cycle: empty -> burrito -> avocado -> nacho -> empty ---
+// --- Single mark: tap marks, mark again is no-op, unmark clears, reveal blocked while marked ---
 {
-  const e = new E(9, 9, 10);
-  e.placeMines(0, null);
-  const i = 4;
-  assert.equal(e.state[i], 0);
-  assert.equal(e.cycleMark(i), E.MARK_BURRITO);
-  assert.equal(e.flags, 1);
-  assert.equal(e.cycleMark(i), E.MARK_AVOCADO);
-  assert.equal(e.flags, 0, 'avocado does not count');
-  assert.equal(e.cycleMark(i), E.MARK_NACHO);
-  assert.equal(e.flags, 0, 'nacho does not count');
-  assert.equal(e.cycleMark(i), 0);
-  assert.equal(e.flags, 0);
+  const e = new E(9, 9, 10, seeded(7));
+  e.revealFirst(40);
+  let i = -1; for (let k = 0; k < 81; k++) if (e.state[k] === 0) { i = k; break; }
+  assert.equal(e.mark(i), true); assert.equal(e.flags, 1);
+  assert.equal(e.mark(i), false, 'second mark is a no-op'); assert.equal(e.flags, 1);
+  assert.deepEqual(e.reveal(i), [], 'marked tile does not reveal');
+  assert.equal(e.unmark(i), true); assert.equal(e.flags, 0); assert.equal(e.state[i], 0);
+  assert.equal(e.unmark(i), false);
+  // icon mapping by true neighbour count
+  assert.equal(E.iconForCount(0), 'nacho'); assert.equal(E.iconForCount(1), 'nacho');
+  assert.equal(E.iconForCount(2), 'avocado'); assert.equal(E.iconForCount(3), 'avocado');
+  assert.equal(E.iconForCount(4), 'burrito'); assert.equal(E.iconForCount(8), 'burrito');
+  for (let k = 0; k < 81; k++) {
+    const n = e.neighbors(k).filter((j) => e.mine[j]).length;
+    assert.equal(e.markIcon(k), E.iconForCount(n));
+  }
 }
 
 // Chord uses burrito marks only (not avocado/nacho)
@@ -55,10 +59,10 @@ for (const [w, h, m] of [[9, 9, 10], [16, 16, 40], [30, 16, 99]]) {
   const mines = e.neighbors(n).filter((j) => e.mine[j]);
   // Mark one as avocado — should NOT satisfy chord
   if (mines.length) {
-    e.state[mines[0]] = E.MARK_AVOCADO;
+    e.state[mines[0]] = 0;
     const before = e.revealedCount;
     e.chord(n);
-    assert.equal(e.revealedCount, before, 'avocado alone should not chord');
+    assert.equal(e.revealedCount, before, 'unmarked should not chord');
     // Mark all mines as burrito
     mines.forEach((j) => {
       if (e.state[j] !== E.MARK_BURRITO) {
