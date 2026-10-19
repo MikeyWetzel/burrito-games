@@ -1,0 +1,25 @@
+LEVEL {"level": 1, "won": true, "shots": [[-0.8301805382450494, -0.7216649318895579, 35]], "result": {"state": "won", "avos": 0, "blocks": 0, "down": 0, "left": 2, "reason": "snacks", "score": 31500}, "sims": 96}
+LEVEL {"level": 2, "won": true, "shots": [[-1.3866418961464015, -0.42393897184796836, 35]], "result": {"state": "won", "avos": 0, "blocks": 6, "down": 6, "left": 2, "reason": "snacks", "score": 41500}, "sims": 96}
+LEVEL {"level": 3, "won": true, "shots": [[-1.721348560733464, -0.5262690685009263, 35]], "result": {"state": "won", "avos": 0, "blocks": 5, "down": 5, "left": 2, "reason": "structures", "score": 42000}, "sims": 96}
+LEVEL {"level": 4, "won": true, "shots": [[-1.3347320375060387, -0.5665601363094469, -1]], "result": {"state": "won", "avos": 0, "blocks": 7, "down": 6, "left": 3, "reason": "snacks", "score": 51500}, "sims": 96}
+LEVEL {"level": 5, "won": true, "shots": [[-1.1877704642190383, -0.8316858327090169, 35], [-1.1877704642190383, -0.8316858327090169, -1]], "result": {"state": "won", "avos": 0, "blocks": 7, "down": 3, "left": 1, "reason": "snacks", "score": 30500}, "sims": 384}
+LEVEL {"level": 6, "won": true, "shots": [[-1.721348560733464, -0.5262690685009263, -1]], "result": {"state": "won", "avos": 0, "blocks": 7, "down": 7, "left": 2, "reason": "snacks", "score": 43000}, "sims": 192}
+LEVEL {"level": 7, "won": true, "shots": [[-1.3866418961464015, -0.42393897184796836, 35]], "result": {"state": "won", "avos": 0, "blocks": 8, "down": 8, "left": 2, "reason": "snacks", "score": 42500}, "sims": 96}
+LEVEL {"level": 8, "won": true, "shots": [[-1.7931504565651422, -0.1568803369457847, 35]], "result": {"state": "won", "avos": 0, "blocks": 23, "down": 23, "left": 3, "reason": "snacks", "score": 93500}, "sims": 192}
+TOPPLE 1 {'state': 'won', 'reason': 'structures', 'steps': 21}
+TOPPLE 2 {'state': 'won', 'reason': 'structures', 'steps': 21}
+TOPPLE 3 {'state': 'won', 'reason': 'structures', 'steps': 21}
+TOPPLE 4 {'state': 'won', 'reason': 'structures', 'steps': 21}
+TOPPLE 5 {'state': 'won', 'reason': 'structures', 'steps': 21}
+TOPPLE 6 {'state': 'won', 'reason': 'structures', 'steps': 21}
+TOPPLE 7 {'state': 'won', 'reason': 'structures', 'steps': 95}
+TOPPLE 8 {'state': 'won', 'reason': 'structures', 'steps': 21}
+UI 1 {'state': 'won', 'shown': True, 'title': 'Level cleared!', 'stars': '★★★', 'frames': 270}
+UI 2 {'state': 'won', 'shown': True, 'title': 'Level cleared!', 'stars': '★★★', 'frames': 267}
+UI 3 {'state': 'won', 'shown': True, 'title': 'Level cleared!', 'stars': '★★★', 'frames': 249}
+UI 4 {'state': 'won', 'shown': True, 'title': 'Level cleared!', 'stars': '★★★', 'frames': 268}
+UI 5 {'state': 'won', 'shown': True, 'title': 'Level cleared!', 'stars': '★★★', 'frames': 529}
+UI 6 {'state': 'won', 'shown': True, 'title': 'Level cleared!', 'stars': '★★★', 'frames': 256}
+UI 7 {'state': 'won', 'shown': True, 'title': 'Level cleared!', 'stars': '★★★', 'frames': 286}
+UI 8 {'state': 'won', 'shown': True, 'title': 'Level cleared!', 'stars': '★★★', 'frames': 271}
+ERRORS []
