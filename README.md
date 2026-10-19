@@ -1,2 +1,26 @@
-# burrito-games
-🌯 A suite of burrito-themed browser games. Game 1: Burrito Sweeper
+# 🌯 Burrito Games
+
+A suite of classic browser games with a burrito twist. Plain HTML/CSS/JS, no build step, works offline.
+
+**Play:** https://mikeywetzel.github.io/burrito-games/
+
+| Game | Status |
+|---|---|
+| [Burrito Sweeper](burrito-sweeper/) | ✅ Live |
+| Burrito Ninja | Coming soon |
+| Flappy Burrito | Coming soon |
+| Angry Burritos | Coming soon |
+
+## Layout
+- `index.html` – suite landing page
+- `shared/win98.css` – classic Windows chrome (beveled windows, title bars, LED displays)
+- `shared/burrito-art.js` – reusable inline-SVG art (`BurritoArt.burrito()`, `.hotSauce()`, `.salsa()`, `.face(state)`)
+- `<game>/index.html` – each game in its own folder
+
+## Burrito Sweeper
+Classic Windows Minesweeper clone: Beginner (9×9, 10), Intermediate (16×16, 40), Expert (30×16, 99). First click is always safe (opens a 3×3 area), best times saved in localStorage.
+- Desktop: left click reveal, right click flag, click a number / both buttons to chord, F2 new game.
+- Mobile: tap reveal (tap a number to chord), long-press to flag.
+
+Run locally: open `index.html` in a browser, or `python3 -m http.server`.
+Tests: `node burrito-sweeper/test.js`.
