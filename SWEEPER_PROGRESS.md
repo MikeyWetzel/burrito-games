@@ -1,21 +1,19 @@
-# Burrito Sweeper — Flat Calm (Style B) — DONE
+# Burrito Sweeper — Flat Calm + live blank-screen fix
 
-Updated: 2026-10-19 America/New_York
+## Root cause (Pixel white screen)
+Boot waited on Poppins `FontFace.load()` before the first paint. On a slower Android phone that promise can hang or take so long the UI stays a cream/white shell with no board and feels frozen. Queso could also linger. SiteGround `protect_captcha` can additionally serve 403 HTML instead of JS to some clients/IPs (we could not disable it via site-tools).
 
-## Commits (main)
-- https://github.com/MikeyWetzel/burrito-games/commit/433268f8f7e3d5fea5bc8ae2725753af62c0608a — engine/theme/queso/game
-- https://github.com/MikeyWetzel/burrito-games/commit/20fae400cee18731fbd4010501c6e7c3a0407575 — HTML/tests/landing/progress
-- https://github.com/MikeyWetzel/burrito-games/commit/fdc992f4acca98306f043d5781f09d178b5b8828 — Poppins embed + shell wiring
+## Fix (deployed)
+- Boot immediately with system-ui; load Poppins in background with 1.5s timeout
+- Per-face font load timeout 1.2s; failures ignored
+- Queso: `pointer-events: none`, `forceClear()` + safety timer
+- Global error + 5s script watchdog banner
+- Cache-bust `?v=20261019b` on scripts; `.htaccess` no-cache for js/html
+- First-click board gen deferred 30ms off the tap turn
+
+## Commits
+- https://github.com/MikeyWetzel/burrito-games/commit/e27d7eb058f0987b01c51a442680d98428b4bed7
+- https://github.com/MikeyWetzel/burrito-games/commit/26375b248c73fb1dc32c2cb195f902f6fe9318f9
 
 ## Live
-- https://apps.bobacat.cafe/burrito/burrito-sweeper/
-- Landing: https://apps.bobacat.cafe/burrito/
-
-## QA
-- Node: 200/200 solvable × 3 difficulties; Expert avg ~18ms max ~109ms
-- Playwright 390×844 DPR3: 0 errors; FPS ~57 Expert pan; fonts ready
-- Shots: shots/sweeper-v2/final/
-
-## SiteGround
-- Backup: ~/www/apps.bobacat.cafe/public_html/_backups/burrito-pre-sweeper-v2-20261019-165709.tgz
-- Cache flushed; all checked URLs 200; lingo/ untouched
+https://apps.bobacat.cafe/burrito/burrito-sweeper/
