@@ -51,6 +51,26 @@
     this.state[i] = next;
     return next;
   };
+
+  /** Single mark kind. mark(i): hidden+unmarked -> marked. unmark(i): marked -> hidden. */
+  Engine.prototype.mark = function (i) {
+    if (this.over || this.state[i] !== 0) return false;
+    this.state[i] = MARK_BURRITO; this.flags++; return true;
+  };
+  Engine.prototype.unmark = function (i) {
+    if (this.over || this.state[i] !== MARK_BURRITO) return false;
+    this.state[i] = 0; this.flags--; return true;
+  };
+  /** Count of true hidden items (burritos) among the 8 neighbours (0 before board exists). */
+  Engine.prototype.neighborMines = function (i) {
+    if (!this.placed) return 0;
+    var nb = this.neighbors(i), c = 0;
+    for (var k = 0; k < nb.length; k++) if (this.mine[nb[k]]) c++;
+    return c;
+  };
+  /** Cosmetic icon: 0-1 nacho, 2-3 avocado, 4+ burrito. */
+  Engine.iconForCount = function (n) { return n >= 4 ? 'burrito' : n >= 2 ? 'avocado' : 'nacho'; };
+  Engine.prototype.markIcon = function (i) { return Engine.iconForCount(this.neighborMines(i)); };
   Engine.prototype.cycleMark = function (i) {
     if (this.over || this.state[i] === 1) return null;
     var prev = this.state[i];

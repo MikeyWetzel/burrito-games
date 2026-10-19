@@ -20,7 +20,6 @@
   var Theme = window.SweeperTheme;
   var Eng = window.SweeperEngine;
   var MARK_NAME = { 2: 'burrito', 3: 'avocado', 4: 'nacho' };
-  var MARK_VAL = { burrito: Eng.MARK_BURRITO, avocado: Eng.MARK_AVOCADO, nacho: Eng.MARK_NACHO };
 
   var canvas = document.getElementById('board');
   var ctx = canvas.getContext('2d');
@@ -49,7 +48,6 @@
   var running = true, lastFrame = 0, fpsSamples = [], lastFps = 60;
   var fontsReady = false;
   /** null = cycle mode; else 'burrito'|'avocado'|'nacho' */
-  var markPick = null;
 
   function isPortraitPhone() {
     return window.matchMedia('(max-width: 600px), ((pointer: coarse) and (orientation: portrait))').matches;
@@ -129,13 +127,8 @@
     dots.forEach(function (d, i) { d.classList.toggle('on', i < L.dots); });
     updateMarkerLabel();
   }
-  function updateMarkerLabel() {
-    var text = markPick ? ('Marker: ' + markPick.charAt(0).toUpperCase() + markPick.slice(1)) : 'Marker: Cycle';
-    hud.markerLabel.textContent = text;
-    document.querySelectorAll('#markerBar button').forEach(function (b) {
-      b.classList.toggle('selected', markPick != null && b.dataset.mark === markPick);
-    });
-  }
+  function updateMarkerLabel() {}
+
 
   function newGame(opts) {
     opts = opts || {};
@@ -217,19 +210,33 @@
   }
 
   function doMark(i) {
-    if (!eng || eng.over) return;
+    if (!eng || eng.over || generating) return;
     if (eng.state[i] === 1) return;
-    var next;
-    if (markPick) {
-      var want = MARK_VAL[markPick];
-      next = eng.state[i] === want ? eng.setMark(i, 0) : eng.setMark(i, want);
-    } else {
-      next = eng.cycleMark(i);
+    if (eng.state[i] === Eng.MARK_BURRITO) {
+      anims[i] = { type: 'wiggle', t0: performance.now(), dur: 320 };
+      return;
     }
-    anims[i] = { type: 'mark', t0: performance.now(), dur: 260, kind: MARK_NAME[next] || null };
-    updateHud();
-    beep(next === Eng.MARK_BURRITO ? 520 : next ? 380 : 220, 0.035);
+    if (eng.mark(i)) {
+      anims[i] = { type: 'mark', t0: performance.now(), dur: 260 };
+      updateHud();
+      beep(520, 0.035);
+    }
   }
+  function doUnmark(i) {
+    if (!eng || eng.over) return;
+    if (eng.unmark(i)) {
+      anims[i] = { type: 'unmark', t0: performance.now(), dur: 180 };
+      updateHud();
+      beep(260, 0.03);
+    }
+  }
+  /** Double tap: marked -> unmark; hidden -> reveal; number -> chord. */
+  function doDouble(i) {
+    if (!eng) return;
+    if (eng.state[i] === Eng.MARK_BURRITO) doUnmark(i);
+    else doReveal(i);
+  }
+
 
   var ac = null;
   function beep(freq, dur) {
@@ -287,18 +294,23 @@
             ctx.scale(0.92 + 0.08 * ease, 0.92 + 0.08 * ease);
             ctx.translate(-(px + c / 2), -(py + c / 2));
             th.drawTileOpen(ctx, px, py, c, eng.mine[i] ? 0 : eng.adj[i]);
-            if (eng.mine[i]) th.drawMine(ctx, px, py, c, i === eng.exploded);
+            if (eng.mine[i]) th.drawMine(ctx, px, py, c, i === eng.exploded, eng.markIcon(i));
             ctx.restore();
           } else {
             th.drawTileOpen(ctx, px, py, c, eng.mine[i] ? 0 : eng.adj[i]);
-            if (eng.mine[i]) th.drawMine(ctx, px, py, c, i === eng.exploded);
+            if (eng.mine[i]) th.drawMine(ctx, px, py, c, i === eng.exploded, eng.markIcon(i));
           }
         } else {
           th.drawTileClosed(ctx, px, py, c, { i: x, j: y });
-          if (st === Eng.MARK_BURRITO || st === Eng.MARK_AVOCADO || st === Eng.MARK_NACHO) {
-            th.drawMark(ctx, px, py, c, MARK_NAME[st], markT);
+          if (st === Eng.MARK_BURRITO) {
+            if (a && a.type === 'wiggle') {
+              var wt = Math.min(1, (now - a.t0) / a.dur);
+              if (wt >= 1) delete anims[i];
+              ctx.save(); ctx.translate(px + c / 2, py + c / 2); ctx.rotate(Math.sin(wt * Math.PI * 4) * 0.18 * (1 - wt)); ctx.translate(-(px + c / 2), -(py + c / 2));
+              th.drawMark(ctx, px, py, c, eng.markIcon(i), 1); ctx.restore();
+            } else th.drawMark(ctx, px, py, c, eng.markIcon(i), markT);
           } else if (eng.over && !eng.won && eng.mine[i]) {
-            th.drawMine(ctx, px, py, c, false);
+            th.drawMine(ctx, px, py, c, false, eng.markIcon(i));
           }
         }
       }
@@ -399,7 +411,7 @@
         var now = performance.now();
         if (now - gest.lastTapT < DBL_MS && gest.lastTapCell === cellIdx) {
           clearTapTimer(); gest.lastTapT = 0; gest.lastTapCell = -1;
-          doReveal(cellIdx);
+          doDouble(cellIdx);
         } else {
           gest.lastTapT = now; gest.lastTapCell = cellIdx; clearTapTimer();
           gest.tapTimer = setTimeout(function () {
@@ -443,16 +455,6 @@
     Theme.current.drawHudIcon(cctx, kind, 0, 0, css);
   }
   function paintMarkers() {
-    document.querySelectorAll('#markerBar button').forEach(function (b) {
-      var c = b.querySelector('canvas');
-      var idpr = Math.min(window.devicePixelRatio || 1, 3);
-      var css = 34;
-      c.width = Math.floor(css * idpr); c.height = Math.floor(css * idpr);
-      var cctx = c.getContext('2d');
-      cctx.setTransform(idpr, 0, 0, idpr, 0, 0);
-      cctx.clearRect(0, 0, css, css);
-      Theme.current.drawMark(cctx, 0, 0, css, b.dataset.mark, 1);
-    });
     var mine = document.getElementById('icoMine');
     var idpr = Math.min(window.devicePixelRatio || 1, 3);
     mine.width = Math.floor(22 * idpr); mine.height = Math.floor(22 * idpr);
@@ -483,13 +485,6 @@
     level = LEVEL_ORDER[(i + 1) % LEVEL_ORDER.length];
     localStorage.setItem('bs-level', level);
     newGame();
-  });
-  document.querySelectorAll('#markerBar button').forEach(function (b) {
-    b.addEventListener('click', function () {
-      if (markPick === b.dataset.mark) markPick = null;
-      else markPick = b.dataset.mark;
-      updateMarkerLabel();
-    });
   });
 
   window.addEventListener('resize', function () {
@@ -531,8 +526,8 @@
     screenToCell: screenToCell,
     applyPinch: applyPinch,
     showOver: showOver,
-    get markPick() { return markPick; },
-    setMarkPick: function (v) { markPick = v; updateMarkerLabel(); },
+    doDouble: doDouble,
+    doUnmark: doUnmark,
     MOVE_THRESH: MOVE_THRESH,
     DBL_MS: DBL_MS,
     fontsReady: function () { return fontsReady; }

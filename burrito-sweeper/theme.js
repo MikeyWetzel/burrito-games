@@ -268,9 +268,11 @@
       ctx.restore();
     },
 
-    drawMine: function (ctx, x, y, size, exploded) {
+    drawMine: function (ctx, x, y, size, exploded, kind) {
       var pad = size * 0.08;
-      drawBurritoB(ctx, x + pad, y + pad, size - pad * 2);
+      if (kind === 'avocado') drawAvocadoB(ctx, x + pad, y + pad, size - pad * 2);
+      else if (kind === 'nacho' || kind === 'chip') drawChipB(ctx, x + pad, y + pad, size - pad * 2);
+      else drawBurritoB(ctx, x + pad, y + pad, size - pad * 2);
       if (exploded) {
         ctx.save();
         ctx.strokeStyle = this.colors.danger;

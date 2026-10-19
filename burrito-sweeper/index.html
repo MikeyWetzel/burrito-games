@@ -45,14 +45,7 @@ body{display:flex;flex-direction:column;height:100dvh;
 .circlebtn canvas{width:26px;height:26px}
 .dock-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex:0 0 auto}
 .dock-col label{font-size:10.5px;font-weight:600;color:#7B879A}
-#markerBar{flex:1;max-width:220px;height:52px;background:#fff;border-radius:16px;
-  box-shadow:0 6px 16px rgba(58,74,102,.12);display:flex;align-items:center;justify-content:space-around;
   padding:4px;position:relative}
-#markerBar button{appearance:none;border:0;background:transparent;width:58px;height:44px;border-radius:12px;
-  display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
-#markerBar button.selected{background:#FDEBD9}
-#markerBar canvas{width:34px;height:34px;pointer-events:none}
-#markerLabel{font-size:10.5px;font-weight:600;color:#7B879A;text-align:center;margin-top:2px}
 #helpPanel{position:absolute;left:14px;right:14px;bottom:14px;z-index:6;
   background:#ffffffe6;border-radius:16px;padding:14px 16px;font-size:13px;line-height:1.45;
   box-shadow:0 8px 24px rgba(58,74,102,.18);max-height:55%;overflow:auto;color:#24324A}
@@ -103,8 +96,9 @@ body{display:flex;flex-direction:column;height:100dvh;
       <h2>How to play</h2>
       <ul>
         <li><b>Double tap</b> a tile to reveal. First reveal is always safe.</li>
-        <li><b>Single tap</b> places a marker. By default taps <b>cycle</b>: empty → burrito → avocado → nacho → empty.</li>
-        <li>Use the <b>marker picker</b> below to place a specific type with each tap (tap the selected chip again to return to cycle mode). Only the <b>burrito</b> counts toward the counter and chording; avocado &amp; nacho are maybe-notes.</li>
+        <li><b>Single tap</b> a hidden tile to mark it. Tapping a marked tile does nothing.</li>
+        <li><b>Double tap</b> a marked tile to unmark it; double tap again to reveal.</li>
+        <li>The mark icon is automatic: a <b>nacho chip</b> means 0–1 burritos hide next to it, an <b>avocado</b> 2–3, a <b>burrito</b> 4 or more. The counter counts every mark.</li>
         <li><b>Drag</b> to pan · <b>pinch</b> (or wheel) to zoom · <b>Fit board</b> recenters.</li>
         <li>Double tap a number with the right burrito count to chord. Boards are logic-solvable — no forced guesses.</li>
       </ul>
@@ -116,14 +110,7 @@ body{display:flex;flex-direction:column;height:100dvh;
     <button type="button" class="circlebtn" id="btnRestart" aria-label="Restart"><canvas></canvas></button>
     <label>Restart</label>
   </div>
-  <div class="dock-col" style="flex:1;max-width:240px">
-    <div id="markerBar" role="group" aria-label="Marker picker">
-      <button type="button" data-mark="burrito" aria-label="Burrito marker"><canvas></canvas></button>
-      <button type="button" data-mark="avocado" aria-label="Avocado marker"><canvas></canvas></button>
-      <button type="button" data-mark="nacho" aria-label="Nacho marker"><canvas></canvas></button>
-    </div>
-    <div id="markerLabel">Marker: Cycle</div>
-  </div>
+  <div class="dock-col" style="flex:1"></div>
   <div class="dock-col">
     <button type="button" class="circlebtn" id="btnFit" aria-label="Fit board"><canvas></canvas></button>
     <label>Fit board</label>
@@ -154,10 +141,10 @@ body{display:flex;flex-direction:column;height:100dvh;
   }, 5000);
 })();
 </script>
-<script src="fonts/poppins-base64.js?v=20261019b"></script>
-<script src="theme.js?v=20261019b"></script>
-<script src="engine.js?v=20261019b"></script>
-<script src="queso.js?v=20261019b"></script>
-<script src="game.js?v=20261019b"></script>
+<script src="fonts/poppins-base64.js?v=20261019c"></script>
+<script src="theme.js?v=20261019c"></script>
+<script src="engine.js?v=20261019c"></script>
+<script src="queso.js?v=20261019c"></script>
+<script src="game.js?v=20261019c"></script>
 </body>
 </html>
