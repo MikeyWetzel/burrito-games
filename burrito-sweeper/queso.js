@@ -44,7 +44,12 @@
     this.active = true;
     this.canvas.style.display = 'block';
     this.canvas.style.opacity = '1';
+    this.canvas.style.pointerEvents = 'none';
     this.canvas.setAttribute('aria-hidden', 'false');
+    // Safety: never leave overlay stuck
+    var self = this;
+    clearTimeout(this._safety);
+    this._safety = setTimeout(function () { self.forceClear(); }, (this.duration || 1000) + 800);
 
     if (this.reduced) {
       this._mode = 'fade';
@@ -139,16 +144,28 @@
     ctx.globalAlpha = 1;
   };
 
+
+  Queso.prototype.forceClear = function () {
+    this.active = false;
+    clearTimeout(this._safety);
+    this.canvas.style.display = 'none';
+    this.canvas.style.opacity = '0';
+    this.canvas.style.pointerEvents = 'none';
+    this.canvas.setAttribute('aria-hidden', 'true');
+    try {
+      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      this.ctx.clearRect(0, 0, this.canvas.width || 0, this.canvas.height || 0);
+    } catch (e) {}
+  };
+
   Queso.prototype.frame = function (now) {
     if (!this.active) return false;
     var p = (now - this.t0) / this.duration;
     if (p >= 1) {
-      this.active = false;
-      this.canvas.style.display = 'none';
-      this.canvas.setAttribute('aria-hidden', 'true');
-      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      if (this.onDone) this.onDone();
+      var done = this.onDone;
+      this.onDone = null;
+      this.forceClear();
+      if (done) done();
       return false;
     }
     if (this._mode === 'fade') this._drawFade(p);

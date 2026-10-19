@@ -1,0 +1,13 @@
+# Burrito Sweeper — correct MIME + short cache so fixes ship fast
+<IfModule mod_mime.c>
+  AddType application/javascript .js
+  AddType font/woff2 .woff2
+</IfModule>
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|html)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+  <FilesMatch "\.(woff2)$">
+    Header set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+</IfModule>

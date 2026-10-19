@@ -7,10 +7,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Burrito Sweeper</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌯</text></svg>">
-<link rel="preload" href="fonts/Poppins-Regular.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/Poppins-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/Poppins-Bold.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/Poppins-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:'Poppins';font-style:normal;font-weight:400;font-display:swap;src:url('fonts/Poppins-Regular.woff2') format('woff2')}
 @font-face{font-family:'Poppins';font-style:normal;font-weight:600;font-display:swap;src:url('fonts/Poppins-SemiBold.woff2') format('woff2')}
@@ -133,10 +129,35 @@ body{display:flex;flex-direction:column;height:100dvh;
     <label>Fit board</label>
   </div>
 </footer>
-<script src="fonts/poppins-base64.js"></script>
-<script src="theme.js"></script>
-<script src="engine.js"></script>
-<script src="queso.js"></script>
-<script src="game.js"></script>
+
+<div id="bootError" hidden style="position:fixed;inset:auto 12px 12px 12px;z-index:9999;background:#fff;color:#24324A;border-radius:14px;padding:14px 16px;box-shadow:0 8px 28px rgba(58,74,102,.25);font:600 14px system-ui,sans-serif"></div>
+<script>
+(function(){
+  function show(msg){
+    var el=document.getElementById('bootError');
+    if(!el) return;
+    el.hidden=false;
+    el.textContent=msg;
+  }
+  window.__sweeperShowError=show;
+  window.addEventListener('error', function(e){
+    show('Something broke loading Burrito Sweeper. Try refresh. ('+(e.message||'error')+')');
+  });
+  window.addEventListener('unhandledrejection', function(e){
+    show('Something broke loading Burrito Sweeper. Try refresh. ('+(e.reason&&e.reason.message||e.reason||'promise')+')');
+  });
+  // Watchdog: if game API never appears, say so
+  setTimeout(function(){
+    if(!window.BurritoSweeper){
+      show('Game scripts did not load (blocked or timed out). Pull to refresh, or try Wi‑Fi. If you see a SiteGround security check, wait for it to finish then reload.');
+    }
+  }, 5000);
+})();
+</script>
+<script src="fonts/poppins-base64.js?v=20261019b"></script>
+<script src="theme.js?v=20261019b"></script>
+<script src="engine.js?v=20261019b"></script>
+<script src="queso.js?v=20261019b"></script>
+<script src="game.js?v=20261019b"></script>
 </body>
 </html>

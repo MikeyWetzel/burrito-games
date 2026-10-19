@@ -180,8 +180,9 @@
     }
   }
 
+  var generating = false;
   function doReveal(i) {
-    if (!eng || eng.over) return;
+    if (!eng || eng.over || generating) return;
     if (eng.state[i] === 1) {
       var ch = eng.chord(i);
       if (ch.length) { staggerReveal(ch); afterMove(); }
@@ -189,9 +190,30 @@
     }
     if (eng.state[i] === Eng.MARK_BURRITO) return;
     if (!started) startTimer();
-    var changed = eng.placed ? eng.reveal(i) : eng.revealFirst(i);
-    staggerReveal(changed);
-    afterMove();
+    if (eng.placed) {
+      var changed = eng.reveal(i);
+      staggerReveal(changed);
+      afterMove();
+      return;
+    }
+    // First click: generate off the tap turn so UI stays responsive on slow phones
+    generating = true;
+    hud.status.textContent = 'Shuffling…';
+    hud.status.style.color = '#7B879A';
+    if (!queso.active) queso.start({ duration: 700 });
+    setTimeout(function () {
+      try {
+        var changed2 = eng.revealFirst(i);
+        staggerReveal(changed2);
+        afterMove();
+        if (!eng.over) { hud.status.textContent = ''; }
+      } catch (err) {
+        if (window.__sweeperShowError) window.__sweeperShowError('Board create failed: ' + (err.message || err));
+      } finally {
+        generating = false;
+        try { if (queso && queso.forceClear) setTimeout(function(){ queso.forceClear(); }, 50); } catch (e) {}
+      }
+    }, 30);
   }
 
   function doMark(i) {
@@ -517,22 +539,64 @@
   };
 
   Theme.set('flat-calm');
-  function boot() {
-    paintMarkers();
-    newGame({ skipQueso: false });
-    resize();
-    requestAnimationFrame(loop);
+
+  var booted = false;
+  function boot(opts) {
+    if (booted) {
+      // fonts arrived later — just repaint HUD with Poppins
+      try { paintMarkers(); } catch (e) {}
+      return;
+    }
+    booted = true;
+    try {
+      paintMarkers();
+      newGame({ skipQueso: !!(opts && opts.skipQueso) });
+      resize();
+      requestAnimationFrame(loop);
+    } catch (err) {
+      if (window.__sweeperShowError) {
+        window.__sweeperShowError('Could not start game: ' + (err && err.message || err));
+      }
+      throw err;
+    }
   }
 
-  // Load Poppins into document fonts so canvas can use it
-  var fontPromise = (typeof window.loadPoppinsFonts === 'function')
-    ? window.loadPoppinsFonts()
-    : Promise.all([
-        new FontFace('Poppins', 'url(fonts/Poppins-Regular.woff2)', { weight: '400' }),
-        new FontFace('Poppins', 'url(fonts/Poppins-SemiBold.woff2)', { weight: '600' }),
-        new FontFace('Poppins', 'url(fonts/Poppins-Bold.woff2)', { weight: '700' }),
-        new FontFace('Poppins', 'url(fonts/Poppins-ExtraBold.woff2)', { weight: '800' })
-      ].map(function (f) { return f.load().then(function (ff) { document.fonts.add(ff); }); }));
-  fontPromise.then(function () { fontsReady = true; boot(); })
-    .catch(function () { fontsReady = false; boot(); });
+  function withTimeout(promise, ms) {
+    return new Promise(function (resolve, reject) {
+      var done = false;
+      var t = setTimeout(function () {
+        if (done) return;
+        done = true;
+        reject(new Error('timeout ' + ms + 'ms'));
+      }, ms);
+      promise.then(function (v) {
+        if (done) return;
+        done = true; clearTimeout(t); resolve(v);
+      }, function (e) {
+        if (done) return;
+        done = true; clearTimeout(t); reject(e);
+      });
+    });
+  }
+
+  // CRITICAL: paint immediately with system-ui. Never block first frame on fonts.
+  boot({ skipQueso: false });
+
+  // Load Poppins in the background (max 1.5s). Repaint when ready.
+  var fontPromise;
+  try {
+    fontPromise = (typeof window.loadPoppinsFonts === 'function')
+      ? window.loadPoppinsFonts()
+      : Promise.resolve();
+  } catch (e) {
+    fontPromise = Promise.reject(e);
+  }
+  withTimeout(Promise.resolve(fontPromise), 1500)
+    .then(function () { fontsReady = true; boot(); })
+    .catch(function () { fontsReady = false; /* already booted */ });
+
+  // Extra safety: clear queso if somehow stuck after 3s
+  setTimeout(function () {
+    try { if (queso && queso.active) queso.forceClear(); } catch (e) {}
+  }, 3000);
 })();
