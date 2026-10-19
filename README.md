@@ -9,7 +9,7 @@ A suite of classic browser games with a burrito twist. Plain HTML/CSS/JS, no bui
 | [Burrito Sweeper](burrito-sweeper/) | ✅ Live |
 | [Burrito Ninja](burrito-ninja/) | ✅ Live |
 | [Flappy Burrito](flappy-burrito/) | ✅ Live |
-| Angry Burritos | Coming soon |
+| [Angry Burritos](angry-burritos/) | ✅ Live |
 
 ## Layout
 - `index.html` – suite landing page
@@ -33,3 +33,6 @@ Fruit Ninja-style slicer on a wooden dojo floor. Swipe (finger or mouse) to slic
 
 ## Flappy Burrito
 Pixel-faithful Flappy Bird clone at the original 144×256 logical resolution, scaled crisply and letterboxed on any screen. Tap / click / Space to flap through green pipes with salsa-dripping lips. Get Ready screen, Game Over banner, score panel with bronze/silver/gold/platinum medals (10/20/30/40), best score in localStorage, synthesized sounds (mute button), vibrate on hit.
+
+## Angry Burritos
+Portrait Angry Birds-style physics game (vendored [Planck.js](https://github.com/piqnt/planck.js) 1.0.6, MIT, in `angry-burritos/vendor/` — no CDN). Drag back on the slingshot and release; tap mid-flight for abilities: red burrito battle-cry boost, taco splits into 3, chimichanga explodes. Wood, glass and stone blocks crack and break by impact; smug avocados (plain, helmet, king) pop. 8 levels, 1–3 stars and best scores saved in localStorage, level select, pause, auto camera (overview → aim → follow shot), swipe the right side to look around.
