@@ -274,7 +274,7 @@
   /* ---------- camera ---------- */
   var overviewT = 0, panX = 0, pan = null;
   function aimView() {
-    var f = fitView(), s = Math.max(f.s, Math.min(W / 11, (H * GROUND_FRAC - 80) / 9));
+    var f = fitView(), s = Math.max(f.s, Math.min(W / 7.6, (H * GROUND_FRAC - 80) / 8.5));
     var minX = -2.6 + W / s / 2, maxX = Math.max(minX, (level ? level.right : 16) + 2.5 - W / s / 2);
     return { x: Math.max(minX, Math.min(maxX, minX + panX)), y: (H * (GROUND_FRAC - 0.5)) / s, s: s, minX: minX, maxX: maxX };
   }
@@ -363,7 +363,7 @@
       ctx.fillStyle = '#f1c04d'; ctx.beginPath(); ctx.arc(0, -r * 0.25, r * 0.85, 0.3, Math.PI - 0.3); ctx.lineTo(-r * 0.6, -r * 0.1); ctx.closePath(); ctx.globalAlpha = 0.35; ctx.fill(); ctx.globalAlpha = 1;
       faceAngry(r * 0.15, r * 0.15, r * 0.75); return;
     }
-    var body = type === 'chimi' ? ['#7a4416', '#4a2408', '#a0622a'] : ['#e8452c', '#8a1a0a', '#f7b39a'];
+    var body = type === 'chimi' ? ['#c8822e', '#5a2e08', '#f0b060'] : ['#e8452c', '#8a1a0a', '#f7b39a'];
     ctx.fillStyle = body[0]; ctx.strokeStyle = body[1]; ctx.lineWidth = r * 0.1;
     ctx.beginPath(); ctx.ellipse(0, 0, r * 1.15, r * 0.95, 0, 0, TAU); ctx.fill(); ctx.stroke();
     ctx.strokeStyle = body[2]; ctx.lineWidth = r * 0.08; ctx.beginPath(); ctx.moveTo(-r * 0.7, -r * 0.7); ctx.quadraticCurveTo(-r * 0.35, 0, -r * 0.7, r * 0.7); ctx.moveTo(-r * 0.3, -r * 0.85); ctx.quadraticCurveTo(r * 0.05, 0, -r * 0.3, r * 0.85); ctx.stroke();
@@ -396,13 +396,12 @@
     drawBg();
     // previous + current trajectory dots
     [lastTrail, trail].forEach(function (tr, idx) { ctx.fillStyle = idx ? '#fff' : 'rgba(255,255,255,.55)'; tr.forEach(function (p) { var s = w2s(p.x, p.y); ctx.beginPath(); ctx.arc(s[0], s[1], Math.max(1.5, cam.s * (p.big ? 0.09 : 0.055)), 0, TAU); ctx.fill(); }); });
-    drawSlingPost(false);
+    drawSlingPost(false); drawSlingPost(true);
     // bird on sling
     var onSling = state === 'aim' && birdsLeft.length ? birdsLeft[0] : null, bx = SLING.x, by = SLING.y;
     if (onSling && drag) { var pv = pullVec(); bx += pv[0]; by += pv[1]; }
     if (onSling) { band(bx - 0.25, by, -0.35); drawBird(onSling, bx, by, drag ? Math.atan2(-(by - SLING.y), -(bx - SLING.x)) : 0); band(bx - 0.25, by, 0.35); }
     else { var a1 = w2s(SLING.x - 0.35, SLING.y + 0.1), a2 = w2s(SLING.x + 0.35, SLING.y + 0.1); ctx.strokeStyle = '#3a1a06'; ctx.lineWidth = Math.max(3, cam.s * 0.14); ctx.beginPath(); ctx.moveTo(a1[0], a1[1]); ctx.lineTo(a2[0], a2[1]); ctx.stroke(); }
-    drawSlingPost(true);
     // queue of waiting birds on the ground
     birdsLeft.slice(onSling ? 1 : 0).forEach(function (bt, i) { drawBird(bt, -1.1 - i * 0.95, BIRD[bt].r, 0); });
     blocks.forEach(drawBlock);
@@ -433,15 +432,14 @@
   }
 
   var last = performance.now(), acc = 0;
-  function frame(now) {
-    var dt = Math.min(0.1, (now - last) / 1000); last = now;
+  function frame(now) { tick(Math.min(0.1, (now - last) / 1000), now); last = now; requestAnimationFrame(frame); }
+  function tick(dt, now) {
     if (world && !paused && state !== 'select' && state !== 'menu') {
       acc += dt; var n = 0; while (acc >= STEP && n < 6) { step(); acc -= STEP; n++; } if (n === 6) acc = 0;
       updateFx(dt);
     }
     updateCamera(dt);
     if (world) render(now / 1000); else { ctx.setTransform(DPR, 0, 0, DPR, 0, 0); drawBg(); }
-    requestAnimationFrame(frame);
   }
   window.addEventListener('resize', resize);
   resize(); requestAnimationFrame(frame);
@@ -451,7 +449,7 @@
 
   window.AngryBurritos = {
     loadLevel: loadLevel, step: step, launch: launch, ability: ability, w2s: w2s, s2w: s2w,
-    get cam() { return cam; }, skipOverview: function () { overviewT = 0; }, updateCamera: updateCamera,
+    get cam() { return cam; }, tick: function (ms, n) { for (var i = 0; i < (n || 1); i++) { var t = performance.now(); tick(ms / 1000, t); } }, aimView: function () { return aimView(); }, fitView: function () { return fitView(); }, skipOverview: function () { overviewT = 0; }, updateCamera: updateCamera,
     get s() { return { state: state, score: score, blocks: blocks.length, avos: avos.length, birdsLeft: birdsLeft.length, simTime: simTime }; },
     get blocks() { return blocks; }, get avos() { return avos; }, get bird() { return bird; }, sling: SLING
   };
