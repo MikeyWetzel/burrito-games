@@ -9,9 +9,16 @@ var FACES=[
 ];
 
 function loadPoppins(){
+  function one(face){
+    try {
+      var ff=new FontFace("Poppins","url(data:font/woff2;base64,"+face.data+")",{weight:face.weight, style:"normal"});
+      var load=ff.load().then(function(f){ document.fonts.add(f); return f; });
+      return Promise.race([load, new Promise(function(_,rej){ setTimeout(function(){ rej(new Error("font timeout")); }, 1200); })]);
+    } catch (e) { return Promise.reject(e); }
+  }
+  // Settle all — never reject the whole batch if one face fails
   return Promise.all(FACES.map(function(face){
-    var ff=new FontFace("Poppins","url(data:font/woff2;base64,"+face.data+")",{weight:face.weight, style:"normal"});
-    return ff.load().then(function(f){ document.fonts.add(f); return f; });
+    return one(face).catch(function(){ return null; });
   }));
 }
 root.loadPoppinsFonts=loadPoppins;
