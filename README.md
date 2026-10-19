@@ -7,7 +7,7 @@ A suite of classic browser games with a burrito twist. Plain HTML/CSS/JS, no bui
 | Game | Status |
 |---|---|
 | [Burrito Sweeper](burrito-sweeper/) | ✅ Live |
-| Burrito Ninja | Coming soon |
+| [Burrito Ninja](burrito-ninja/) | ✅ Live |
 | Flappy Burrito | Coming soon |
 | Angry Burritos | Coming soon |
 
@@ -24,3 +24,9 @@ Classic Windows Minesweeper clone: Beginner (9×9, 10), Intermediate (16×16, 40
 
 Run locally: open `index.html` in a browser, or `python3 -m http.server`.
 Tests: `node burrito-sweeper/test.js`.
+
+## Burrito Ninja
+Fruit Ninja-style slicer on a wooden dojo floor. Swipe (finger or mouse) to slice burritos, tacos, avocados, limes, jalapeños and chips; avoid the ☠ ghost pepper bomb.
+- Classic: 3 missed items (✕) or slicing a ghost pepper ends the game.
+- Arcade: 60 seconds, no strikes, ghost peppers cost 10 points.
+- Combos (3+ in one swipe), critical hits, best scores in localStorage, synthesized sound (mute button), haptics.
