@@ -193,7 +193,6 @@
     generating = true;
     hud.status.textContent = 'Shuffling…';
     hud.status.style.color = '#7B879A';
-    if (!queso.active) queso.start({ duration: 700 });
     setTimeout(function () {
       try {
         var changed2 = eng.revealFirst(i);
@@ -590,8 +589,8 @@
     .then(function () { fontsReady = true; boot(); })
     .catch(function () { fontsReady = false; /* already booted */ });
 
-  // Extra safety: clear queso if somehow stuck after 3s
+  // Extra safety: clear queso if somehow stuck (slow goo is ~4.25s)
   setTimeout(function () {
     try { if (queso && queso.active) queso.forceClear(); } catch (e) {}
-  }, 3000);
+  }, 7000);
 })();
