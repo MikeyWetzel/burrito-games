@@ -1,0 +1,6 @@
+<FilesMatch "^lib\.php$">
+  Require all denied
+</FilesMatch>
+<FilesMatch "\.json$">
+  Require all denied
+</FilesMatch>

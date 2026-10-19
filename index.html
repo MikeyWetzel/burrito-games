@@ -79,8 +79,19 @@ li.fsd-card a.play-fsd{background:#3e8ef7;color:#fff;border-radius:999px;padding
   </div>
 </div>
 <!-- Revision label. Convention: REV = '1.N', N = revision count (started at commits touching this folder). Bump N on every edit. -->
+<script src="shared/stats.js?v=1"></script>
 <script>
-const REV = '1.4';
+BurritoCounts(function (c) {
+  document.querySelectorAll('a[href]').forEach(function (a) {
+    var g = (a.getAttribute('href') || '').replace(/\/$/, ''); if (!c[g] || a.dataset.pc) return; a.dataset.pc = 1;
+    var m = a.closest('li') && a.closest('li').querySelector('.meta'); if (!m) return;
+    var s = document.createElement('div'); s.className = 'plays'; s.textContent = BurritoFmtPlays(c[g].total);
+    s.style.cssText = 'color:#888;font-size:11px;margin-top:2px;font-family:system-ui,sans-serif'; m.appendChild(s);
+  });
+});
+</script>
+<script>
+const REV = '1.5';
 (function(){var e=document.createElement('div');e.id='rev-label';e.textContent=REV;e.setAttribute('aria-hidden','true');
 e.style.cssText='position:fixed;right:calc(4px + env(safe-area-inset-right,0px));bottom:calc(3px + env(safe-area-inset-bottom,0px));font:10px/1 system-ui,sans-serif;color:rgba(128,128,128,.6);pointer-events:none;z-index:2147483647;user-select:none;';
 (document.body||document.documentElement).appendChild(e);})();
