@@ -8,7 +8,7 @@ A suite of classic browser games with a burrito twist. Plain HTML/CSS/JS, no bui
 |---|---|
 | [Burrito Sweeper](burrito-sweeper/) | ✅ Live |
 | [Burrito Ninja](burrito-ninja/) | ✅ Live |
-| Flappy Burrito | Coming soon |
+| [Flappy Burrito](flappy-burrito/) | ✅ Live |
 | Angry Burritos | Coming soon |
 
 ## Layout
@@ -30,3 +30,6 @@ Fruit Ninja-style slicer on a wooden dojo floor. Swipe (finger or mouse) to slic
 - Classic: 3 missed items (✕) or slicing a ghost pepper ends the game.
 - Arcade: 60 seconds, no strikes, ghost peppers cost 10 points.
 - Combos (3+ in one swipe), critical hits, best scores in localStorage, synthesized sound (mute button), haptics.
+
+## Flappy Burrito
+Pixel-faithful Flappy Bird clone at the original 144×256 logical resolution, scaled crisply and letterboxed on any screen. Tap / click / Space to flap through green pipes with salsa-dripping lips. Get Ready screen, Game Over banner, score panel with bronze/silver/gold/platinum medals (10/20/30/40), best score in localStorage, synthesized sounds (mute button), vibrate on hit.
