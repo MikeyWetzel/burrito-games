@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#008080"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>Burrito Sweeper</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌯</text></svg>">
+<link rel="stylesheet" href="../shared/win98.css">
+<style>
+:root{--cell:24px}
+html,body{height:100%;overscroll-behavior:none}
+body{display:flex;flex-direction:column;align-items:center;min-height:100dvh;padding:calc(8px + env(safe-area-inset-top)) calc(4px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(4px + env(safe-area-inset-left));touch-action:manipulation;-webkit-touch-callout:none;-webkit-text-size-adjust:100%}
+#mode{margin-left:auto}#mode.active{background:#ffd}#mode svg{vertical-align:middle}
+#board{-webkit-touch-callout:none}
+@media (max-width:600px){.window{width:100%}.menubar button{padding:6px 8px;font-size:13px}.wrap{width:100%;overflow-x:hidden}.cell{font-size:calc(var(--cell) * .6)}}
+.wrap{max-width:100%;overflow-x:auto}
+.panel{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;margin:6px 0}
+#face{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--face);border:2px solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);cursor:pointer;padding:0}
+#face.pressed{border-color:var(--lo) var(--hi) var(--hi) var(--lo)}
+#board{display:grid;width:max-content;touch-action:manipulation}
+.cell{width:var(--cell);height:var(--cell);background:var(--face);border:3px solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:16px;font-family:Arial,sans-serif;position:relative;cursor:default;-webkit-tap-highlight-color:transparent}
+.cell.open{border:1px solid var(--lo);border-width:0 1px 1px 0}
+.cell.boom{background:#f00}
+.cell.wrong .x{position:absolute;color:#c00;font-size:20px}
+.n1{color:#0000ff}.n2{color:#008000}.n3{color:#ff0000}.n4{color:#000080}.n5{color:#800000}.n6{color:#008080}.n7{color:#000}.n8{color:#808080}
+.cell svg{pointer-events:none}
+#best{margin-top:10px;color:#fff;text-align:center;font-size:12px}
+.home{color:#fff;margin-top:8px;font-size:12px}
+
+</style>
+</head><body>
+<div class="wrap">
+<div class="window" id="win">
+  <div class="titlebar"><span>🌯</span><span>Burrito Sweeper</span><span class="tb-btns"><a class="tb-btn" href="../" title="Back to Burrito Games">×</a></span></div>
+  <div class="menubar">
+    <button data-level="beginner">Beginner</button>
+    <button data-level="intermediate">Intermediate</button>
+    <button data-level="expert">Expert</button>
+    <button id="mode" aria-label="Toggle tap mode"></button>
+  </div>
+  <div class="sunken panel">
+    <div class="led" id="mines">010</div>
+    <button id="face" aria-label="New game"></button>
+    <div class="led" id="timer">000</div>
+  </div>
+  <div class="sunken"><div id="board"></div></div>
+</div>
+</div>
+<div id="best"></div>
+<div class="home">Tap = reveal · long-press = 🌶️ flag · left/right click · click a number (or both buttons) to chord · F2 = new game · <a href="../" style="color:#ff0">More burrito games</a></div>
+<script src="../shared/burrito-art.js"></script>
+<script src="engine.js"></script>
+<script src="game.js"></script>
+</body></html>
