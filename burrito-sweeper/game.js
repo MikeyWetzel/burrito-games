@@ -525,13 +525,14 @@
   }
 
   // Load Poppins into document fonts so canvas can use it
-  var faces = [
-    new FontFace('Poppins', 'url(fonts/Poppins-Regular.woff2)', { weight: '400' }),
-    new FontFace('Poppins', 'url(fonts/Poppins-SemiBold.woff2)', { weight: '600' }),
-    new FontFace('Poppins', 'url(fonts/Poppins-Bold.woff2)', { weight: '700' }),
-    new FontFace('Poppins', 'url(fonts/Poppins-ExtraBold.woff2)', { weight: '800' })
-  ];
-  Promise.all(faces.map(function (f) { return f.load().then(function (ff) { document.fonts.add(ff); }); }))
-    .then(function () { fontsReady = true; boot(); })
+  var fontPromise = (typeof window.loadPoppinsFonts === 'function')
+    ? window.loadPoppinsFonts()
+    : Promise.all([
+        new FontFace('Poppins', 'url(fonts/Poppins-Regular.woff2)', { weight: '400' }),
+        new FontFace('Poppins', 'url(fonts/Poppins-SemiBold.woff2)', { weight: '600' }),
+        new FontFace('Poppins', 'url(fonts/Poppins-Bold.woff2)', { weight: '700' }),
+        new FontFace('Poppins', 'url(fonts/Poppins-ExtraBold.woff2)', { weight: '800' })
+      ].map(function (f) { return f.load().then(function (ff) { document.fonts.add(ff); }); }));
+  fontPromise.then(function () { fontsReady = true; boot(); })
     .catch(function () { fontsReady = false; boot(); });
 })();
