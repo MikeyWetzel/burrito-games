@@ -17,10 +17,11 @@ canvas{position:fixed;inset:0;width:100vw;height:100dvh;display:block;touch-acti
 <button class="hud-btn" id="mute" aria-label="Toggle sound">🔊</button>
 <a class="hud-btn" id="home" href="../" aria-label="Back to Burrito Games">🏠</a>
 <script src="../shared/burrito-art.js"></script>
+<script src="../shared/stats.js?v=1"></script>
 <script src="ninja.js"></script>
 <!-- Revision label. Convention: REV = '1.N', N = revision count (started at commits touching this folder). Bump N on every edit. -->
 <script>
-const REV = '1.1';
+const REV = '1.2';
 (function(){var e=document.createElement('div');e.id='rev-label';e.textContent=REV;e.setAttribute('aria-hidden','true');
 e.style.cssText='position:fixed;right:calc(4px + env(safe-area-inset-right,0px));bottom:calc(3px + env(safe-area-inset-bottom,0px));font:10px/1 system-ui,sans-serif;color:rgba(128,128,128,.6);pointer-events:none;z-index:2147483647;user-select:none;';
 (document.body||document.documentElement).appendChild(e);})();

@@ -64,7 +64,9 @@
 
   /* ---------- level setup ---------- */
   var loadId = 0;
+  var abBooted = false;
   function loadLevel(i) {
+    if (abBooted) { try { window.BurritoPlay && window.BurritoPlay('angry-burritos'); } catch (e) {} }
     loadId++; levelIdx = i; level = window.AB_LEVELS[i];
     world = pl.World({ gravity: Vec2(0, -10) });
     var ground = world.createBody({ type: 'static', position: Vec2(0, 0) });
@@ -644,7 +646,7 @@
   level = window.AB_LEVELS[0];
   resize();
   // menu backdrop: level 1 scenery behind the title
-  (function menuScene() { loadLevel(0); state = 'menu'; overviewT = 0; $('hud').style.display = 'none'; show('menu'); })();
+  (function menuScene() { loadLevel(0); state = 'menu'; overviewT = 0; $('hud').style.display = 'none'; show('menu'); abBooted = true; })();
   requestAnimationFrame(frame);
 
   window.AngryBurritos = {

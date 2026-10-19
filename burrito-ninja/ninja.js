@@ -136,6 +136,7 @@
     ]);
   }
   function start(m) {
+    try { window.BurritoPlay && window.BurritoPlay('burrito-ninja'); } catch (e) {}
     lastMode = m; mode = m; score = 0; strikes = 0; timeLeft = 60; spawnT = 0.6; wave = 0; items = []; newBest = false;
     popups.push({ text: m === 'classic' ? 'GO!' : '60 SECONDS!', x: W / 2, y: H * .4, t: 1.2, size: 46, color: '#fff' });
   }
