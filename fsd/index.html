@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#1c1d20">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>FSD Mad Max</title>
+<link rel="stylesheet" href="style.css?v=1.0.0">
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud" class="hidden">
+  <div id="tl">
+    <div id="speed">70</div>
+    <div class="mph">MPH</div>
+    <div id="limit"><span>SPEED<br>LIMIT</span><b id="limitv">70</b></div>
+  </div>
+  <div id="nav">
+    <svg viewBox="0 0 24 24" class="navarrow"><path d="M9 22V11.5L4.5 7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M9 11.5L15 4" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M11.5 3.2h4.6v4.6" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="navtxt"><b id="navd">2.4 mi</b><span id="navn">Lancer Blvd</span></div>
+    <span class="shield" id="navr">70</span><span class="exitno" id="navx">9</span>
+  </div>
+  <div id="tr">
+    <div class="sd">Self-Driving</div>
+    <div class="mode"><svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>Mad Max</div>
+    <div class="rule"></div>
+    <div class="stat"><b id="streak">0.0 mi</b><span>Streak</span></div>
+    <div class="stat"><b id="score">0</b><span>Score</span></div>
+    <div class="stat sm"><b id="passed">0</b><span>Passed</span></div>
+  </div>
+  <div id="rs" class="hidden">
+    <svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="27" class="trk"/><circle id="ring" cx="32" cy="32" r="27" class="arc"/></svg>
+    <div class="rsin"><b id="rst">12</b><span>ROADSTER</span></div>
+    <div id="charges"></div>
+  </div>
+  <div id="toast"></div>
+  <div id="bar">
+    <button id="mute" aria-label="mute"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#fff"/><path id="waves" d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><path id="xx" d="M16 9l5 6M21 9l-5 6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" style="display:none"/></svg></button>
+    <svg class="carico" viewBox="0 0 40 20"><path d="M4 15v-4l4-1 5-5h13l6 5 4 1v4z" fill="#d8dadd"/><circle cx="11" cy="15.5" r="3" fill="#2b2c2f"/><circle cx="29" cy="15.5" r="3" fill="#2b2c2f"/></svg>
+    <div id="set"><span>&lsaquo;</span><b id="setv">70</b><span>&rsaquo;</span></div>
+    <svg class="laneico" viewBox="0 0 30 26"><path d="M3 25L12 1h6l9 24z" fill="#5a5d62"/><path d="M13 25l2-15 2 15z" fill="#2f8cff"/></svg>
+  </div>
+</div>
+<div id="flash"></div>
+<div id="banner" class="hidden"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="none" stroke="#fff" stroke-width="2.2"/><path d="M3 11.5c3-1.5 15-1.5 18 0M12 13.5v8" stroke="#fff" stroke-width="2.2" fill="none"/></svg><span>Take Over Immediately</span></div>
+<div id="start" class="screen">
+  <div class="card">
+    <div class="kicker">Full Self-Driving</div>
+    <h1>FSD <span>Mad Max</span></h1>
+    <p class="sub">Speed only goes up. Weave through traffic, grab Roadster pickups, and fire the thrusters.</p>
+    <ul class="how">
+      <li><b>Slide</b> anywhere to steer</li>
+      <li><b>Grab</b> red pickups for Roadster mode</li>
+      <li><b>Double-tap</b> to fire steam thrusters &amp; jump</li>
+    </ul>
+    <button id="go" class="pill">Engage</button>
+    <div class="best">Best <b id="best0">0</b></div>
+    <div class="fine">Desktop: mouse drag or &larr; &rarr; · Space to jump. Fan-made game, not affiliated with Tesla.</div>
+  </div>
+</div>
+<div id="over" class="screen hidden">
+  <div class="card">
+    <div class="kicker red">Self-Driving Disengaged</div>
+    <h2 id="oscore">0</h2>
+    <div class="lbl">Score</div>
+    <div class="grid">
+      <div><b id="odist">0.0 mi</b><span>Streak</span></div>
+      <div><b id="opass">0</b><span>Passed</span></div>
+      <div><b id="onear">0</b><span>Near misses</span></div>
+      <div><b id="otop">0</b><span>Top MPH</span></div>
+    </div>
+    <div class="best" id="obest">Best 0</div>
+    <button id="again" class="pill">Re-engage</button>
+  </div>
+</div>
+<script type="module" src="game.js?v=1.0.0"></script>
+</body>
+</html>

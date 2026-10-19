@@ -26,6 +26,14 @@ li.sweeper-card a.play-calm{
   font-weight:700;font-size:14px;text-decoration:none;
   box-shadow:0 4px 12px rgba(58,74,102,.14);font-family:system-ui,-apple-system,Segoe UI,sans-serif
 }
+/* Bonus FSD Mad Max card — Tesla-dark, not burrito-themed */
+li.fsd-card{background:linear-gradient(180deg,#26282c,#141517);border-radius:16px;box-shadow:0 6px 16px rgba(0,0,0,.25);padding:12px;gap:12px;margin-top:10px}
+li.fsd-card .thumb{width:56px;height:56px;border-radius:14px;flex:0 0 auto;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+li.fsd-card .thumb svg{width:100%;height:100%;display:block}
+li.fsd-card .meta b{color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+li.fsd-card .meta small{color:#a9adb3;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+li.fsd-card .meta em{font-style:normal;color:#3e8ef7;font-weight:600}
+li.fsd-card a.play-fsd{background:#3e8ef7;color:#fff;border-radius:999px;padding:10px 18px;font-weight:700;font-size:14px;text-decoration:none;font-family:system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 4px 12px rgba(62,142,247,.35)}
 </style>
 </head><body>
 <div class="window">
@@ -52,6 +60,21 @@ li.sweeper-card a.play-calm{
       <li><span class="icon">🔪</span><span class="meta"><b>Burrito Ninja</b><br><small>Slice burritos, dodge ghost peppers.</small></span><a class="btn98" href="burrito-ninja/">Play</a></li>
       <li><span class="icon">🐦</span><span class="meta"><b>Flappy Burrito</b><br><small>Tap to flap through the salsa pipes.</small></span><a class="btn98" href="flappy-burrito/">Play</a></li>
       <li><span class="icon">🌯</span><span class="meta"><b>Angry Burritos</b><br><small>Fork-fling burritos at hiding avocados, nacho chips &amp; salsa.</small></span><a class="btn98" href="angry-burritos/">Play</a></li>
+      <li class="fsd-card">
+        <div class="thumb" aria-hidden="true">
+          <svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg">
+            <rect width="56" height="56" fill="#1d1e21"/>
+            <path d="M14 56 L25 6 H31 L42 56Z" fill="#0e0f11"/>
+            <path d="M15.2 56 L25.4 6" stroke="#f0ac10" stroke-width="1.4"/>
+            <path d="M40.8 56 L30.6 6" stroke="#e6e8ea" stroke-width="1.2"/>
+            <path d="M24.5 38 L27 8 H29 L31.5 38Z" fill="#2a86ff"/>
+            <rect x="23.5" y="37" width="9" height="13" rx="3" fill="#f3f4f5"/>
+            <rect x="25" y="39.5" width="6" height="7" rx="1.5" fill="#07080a"/>
+          </svg>
+        </div>
+        <span class="meta"><b>FSD Mad Max</b><br><small><em>Bonus · Tesla-style, not burrito-themed.</em> Weave highway traffic at ever-rising speed.</small></span>
+        <a class="play-fsd" href="fsd/">Play</a>
+      </li>
     </ul>
   </div>
 </div>
