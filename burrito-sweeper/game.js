@@ -131,6 +131,7 @@
 
 
   function newGame(opts) {
+    try { window.BurritoPlay && window.BurritoPlay('burrito-sweeper'); } catch (e) {}
     opts = opts || {};
     var stored = localStorage.getItem('bs-level');
     if (stored && LEVELS_P[stored]) level = stored;

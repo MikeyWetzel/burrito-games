@@ -178,7 +178,7 @@
   }
   function spawnPipe(x) { pipes.push({ x: x, gapY: 30 + Math.floor(Math.random() * (GROUND_Y - GAP - 70)), scored: false }); }
   function flap() {
-    if (state === 'ready') { state = 'play'; spawnPipe(LW + 40); spawnPipe(LW + 40 + PIPE_SPACING); }
+    if (state === 'ready') { state = 'play'; try { window.BurritoPlay && window.BurritoPlay('flappy-burrito'); } catch (e) {} spawnPipe(LW + 40); spawnPipe(LW + 40 + PIPE_SPACING); }
     if (state === 'play') { bird.vy = Math.max(UP_CAP, Math.min(bird.vy, FALL_SOFT) + TAP); sfx.wing(); }
   }
   function die() {
