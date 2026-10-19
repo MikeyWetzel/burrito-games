@@ -6,14 +6,14 @@
 <meta name="theme-color" content="#1c1d20">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>FSD Mad Max</title>
-<link rel="stylesheet" href="style.css?v=2.0.0">
+<link rel="stylesheet" href="style.css?v=2.3.0">
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="hud" class="hidden">
   <div id="tl">
     <div id="speed">70</div>
-    <div class="mph">MPH</div>
+    <div class="mph">MPH <span id="tier" data-t="Standard">Standard</span></div>
     <div id="limit"><span>SPEED<br>LIMIT</span><b id="limitv">70</b></div>
   </div>
   <div id="nav">
@@ -23,7 +23,7 @@
   </div>
   <div id="tr">
     <div class="sd">Self-Driving</div>
-    <div class="mode"><svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>Mad Max</div>
+    <div class="mode"><svg viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span id="modeName">Standard</span></div>
     <div class="rule"></div>
     <div class="stat"><b id="streak">0.0 mi</b><span>Streak</span></div>
     <div class="stat"><b id="score">0</b><span>Score</span></div>
@@ -35,6 +35,8 @@
     <div id="charges"></div>
   </div>
   <div id="toast"></div>
+  <div id="lines"></div>
+  <div id="gauge"><div class="gt"><div id="gfill"></div></div><b id="gval">80</b><span id="glab">Standard</span></div>
   <div id="bar">
     <button id="mute" aria-label="mute"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#fff"/><path id="waves" d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><path id="xx" d="M16 9l5 6M21 9l-5 6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" style="display:none"/></svg></button>
     <svg class="carico" viewBox="0 0 40 20"><path d="M4 15v-4l4-1 5-5h13l6 5 4 1v4z" fill="#d8dadd"/><circle cx="11" cy="15.5" r="3" fill="#2b2c2f"/><circle cx="29" cy="15.5" r="3" fill="#2b2c2f"/></svg>
@@ -48,17 +50,17 @@
   <div class="card">
     <div class="kicker">Full Self-Driving</div>
     <h1>FSD <span>Mad Max</span></h1>
-    <p class="sub">You set the pace: never slower than the limit, as fast as you dare. Faster passes score more.</p>
+    <p class="sub">You set the pace: never slower than the limit, up to 100 mph. Faster passes score more.</p>
     <ul class="how">
       <li><b>Slide &larr; &rarr;</b> to steer</li>
-      <li><b>Push &uarr; / pull &darr;</b> to speed up / slow</li>
+      <li><b>Finger height</b> = speed: top 100 mph, bottom the limit</li>
+      <li><b>Slide down fast</b> to brake hard; <b>lift</b> to coast to the limit</li>
       <li><b>Tunnels:</b> keep steering to ride the walls &amp; ceiling</li>
-      <li><b>Grab</b> red pickups for Roadster mode</li>
-      <li><b>Double-tap</b> to fire steam thrusters &amp; jump</li>
+      <li><b>Grab</b> red pickups for Roadster mode; <b>double-tap</b> to steam-jump (you can land on trucks)</li>
     </ul>
     <button id="go" class="pill">Engage</button>
     <div class="best">Best <b id="best0">0</b></div>
-    <div class="fine">Throttle holds when you lift your finger. Desktop: drag, or &larr;&rarr; steer, &uarr;&darr;/W S throttle, Space jump. Fan-made game, not affiliated with Tesla.</div>
+    <div class="fine">Desktop: drag, or &larr;&rarr; steer, &uarr;&darr;/W S throttle, Space jump. Fan-made game, not affiliated with Tesla.</div>
   </div>
 </div>
 <div id="over" class="screen hidden">
@@ -76,7 +78,7 @@
     <button id="again" class="pill">Re-engage</button>
   </div>
 </div>
-<script src="../shared/stats.js?v=1" data-pageload="fsd"></script>
-<script type="module" src="game.js?v=2.0.0"></script>
+<script src="../shared/stats.js?v=1"></script>
+<script type="module" src="game.js?v=2.3.0"></script>
 </body>
 </html>
