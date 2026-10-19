@@ -82,3 +82,6 @@ html.land .card{max-width:calc(var(--u)*120);padding:calc(var(--u)*5) calc(var(-
 html.land .grid{grid-template-columns:repeat(4,1fr)}
 html.land h2{font-size:calc(var(--u)*13)}
 html.land .how{flex-direction:row;gap:calc(var(--u)*5)}html.land .how b{min-width:0;display:block}
+.pop{position:absolute;transform:translate(-50%,-50%);font-weight:700;font-size:calc(var(--u)*5);color:#fff;text-shadow:0 2px 8px #000c,0 0 12px #3e8ef7;animation:popup .9s ease-out forwards;pointer-events:none}
+@keyframes popup{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}20%{opacity:1;transform:translate(-50%,-80%) scale(1.1)}100%{opacity:0;transform:translate(-50%,-260%) scale(1)}}
+#rev{position:fixed;left:6px;bottom:calc(env(safe-area-inset-bottom) + 2px);font-size:9px;color:#ffffff38;font-family:system-ui,sans-serif;pointer-events:none;z-index:9}

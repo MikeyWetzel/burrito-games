@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#1c1d20">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>FSD Mad Max</title>
-<link rel="stylesheet" href="style.css?v=1.0.0">
+<link rel="stylesheet" href="style.css?v=2.0.0">
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -48,15 +48,17 @@
   <div class="card">
     <div class="kicker">Full Self-Driving</div>
     <h1>FSD <span>Mad Max</span></h1>
-    <p class="sub">Speed only goes up. Weave through traffic, grab Roadster pickups, and fire the thrusters.</p>
+    <p class="sub">You set the pace: never slower than the limit, as fast as you dare. Faster passes score more.</p>
     <ul class="how">
-      <li><b>Slide</b> anywhere to steer</li>
+      <li><b>Slide &larr; &rarr;</b> to steer</li>
+      <li><b>Push &uarr; / pull &darr;</b> to speed up / slow</li>
+      <li><b>Tunnels:</b> keep steering to ride the walls &amp; ceiling</li>
       <li><b>Grab</b> red pickups for Roadster mode</li>
       <li><b>Double-tap</b> to fire steam thrusters &amp; jump</li>
     </ul>
     <button id="go" class="pill">Engage</button>
     <div class="best">Best <b id="best0">0</b></div>
-    <div class="fine">Desktop: mouse drag or &larr; &rarr; · Space to jump. Fan-made game, not affiliated with Tesla.</div>
+    <div class="fine">Throttle holds when you lift your finger. Desktop: drag, or &larr;&rarr; steer, &uarr;&darr;/W S throttle, Space jump. Fan-made game, not affiliated with Tesla.</div>
   </div>
 </div>
 <div id="over" class="screen hidden">
@@ -74,6 +76,6 @@
     <button id="again" class="pill">Re-engage</button>
   </div>
 </div>
-<script type="module" src="game.js?v=1.0.0"></script>
+<script type="module" src="game.js?v=2.0.0"></script>
 </body>
 </html>
