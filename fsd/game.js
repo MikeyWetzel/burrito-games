@@ -12,7 +12,7 @@ let RS_ON = Unlocks.has('roadster');
 const _x = 0, DENS = { low: 0.7, normal: 1, high: 1.3 }, CUT = { chill: 0.08, standard: 0.2, madmax: 0.4 }, QPR = { low: 1, med: 1.5, high: 2 };
 
 // ================= constants & helpers =================
-export const REV = '2.0';
+export const REV = '2.1';
 await preloadAll(['m3', 'my', 'ms', 'mx', 'rs', 'sedan', 'suv', 'cop', 'pickup', 'van', 'box', 'semi', 'bus', 'school']); // Blender-built .glb (models/v9) // bump on every deploy
 
 const W = 3.7;                 // lane width (m)
@@ -1020,20 +1020,39 @@ $('tiles').addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return; if (b.id === 'tileSet') return openSettings(false); if (b.id === 'tileLB') return openLB();
   if (b.classList.contains('locked')) { if (!qs.has('test') && !SET.cheat) { b.classList.remove('nudge'); void b.offsetWidth; b.classList.add('nudge'); return; } const ok = await Unlocks.request(b.dataset.id); /* dev shortcut; future rewarded-ad hook */ if (ok) { renderTiles(); const nb = $('tiles').querySelector(`[data-id="${b.dataset.id}"]`); nb.classList.add('pop-unlock'); sfx.init(); sfx.chime(); } }
 });
-// gear shifter: slide up to D starts, down to R springs back
-{ const th = $('thumb'), trk = $('shifter'); let dy0 = null, off = 0;
-  const gearUI = gch => { for (const el of trk.querySelectorAll('.g')) el.classList.toggle('on', el.dataset.g === gch); };
-  th.addEventListener('pointerdown', e => { e.stopPropagation(); dy0 = e.clientY; th.setPointerCapture(e.pointerId); th.style.transition = 'none'; });
-  th.addEventListener('pointermove', e => { if (dy0 === null) return; const lim = trk.clientHeight * 0.5, lo = trk.clientHeight * 0.25; off = clamp(e.clientY - dy0, -lim, lo); th.style.transform = `translate(-50%, calc(-50% + ${off}px))`; gearUI(off < -lim * 0.7 ? 'D' : off < -lim * 0.3 ? 'N' : off > lo * 0.6 ? 'R' : 'P'); });
-  const end = () => { if (dy0 === null) return; dy0 = null; const lim = trk.clientHeight * 0.5, lo = trk.clientHeight * 0.25; th.style.transition = 'transform .25s';
-    if (off < -lim * 0.7) { th.style.transform = `translate(-50%, calc(-50% - ${lim}px))`; gearUI('D'); sfx.init(); setTimeout(() => { start(); }, 380); }
-    else { if (off > lo * 0.6) { sfx.init(); sfx.ping && sfx.ping(); } th.style.transform = 'translate(-50%,-50%)'; gearUI('P'); } off = 0; };
-  th.addEventListener('pointerup', end); th.addEventListener('pointercancel', end);
-  window.__resetShifter = () => { th.style.transition = 'none'; th.style.transform = 'translate(-50%,-50%)'; gearUI('P'); };
+// gear shifter (Tesla parked style): swipe/drag up on the pill shifts to D and starts; down = R, which springs back to P
+{ const th = $('thumb'), trk = $('shifter'), L = $('gearL'), Sm = $('gearS'); let dy0 = null, off = 0, cur = 'P';
+  const gearUI = gch => { if (gch === cur) return; cur = gch; trk.classList.remove('g-P', 'g-N', 'g-D', 'g-R'); trk.classList.add('g-' + gch);
+    L.textContent = gch; Sm.textContent = gch === 'P' ? 'HOLD' : ''; L.classList.remove('pop'); void L.offsetWidth; L.classList.add('pop'); };
+  trk.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); dy0 = e.clientY; off = 0; trk.setPointerCapture(e.pointerId); th.style.transition = 'none'; });
+  trk.addEventListener('pointermove', e => { if (dy0 === null) return; const lim = trk.clientHeight * 0.3, lo = trk.clientHeight * 0.2; off = clamp(e.clientY - dy0, -lim, lo); th.style.transform = `translateY(${off * 0.5}px)`; gearUI(off < -lim * 0.6 ? 'D' : off < -lim * 0.25 ? 'N' : off > lo * 0.5 ? 'R' : 'P'); });
+  const end = () => { if (dy0 === null) return; dy0 = null; const lim = trk.clientHeight * 0.3, lo = trk.clientHeight * 0.2; th.style.transition = ''; th.style.transform = '';
+    if (off < -lim * 0.6) { gearUI('D'); trk.classList.add('go'); sfx.init(); setTimeout(() => { start(); }, 420); }
+    else { if (off > lo * 0.5) { sfx.init(); sfx.ping && sfx.ping(); } gearUI('P'); } off = 0; };
+  trk.addEventListener('pointerup', end); trk.addEventListener('pointercancel', end);
+  window.__resetShifter = () => { trk.classList.remove('go'); th.style.transition = 'none'; th.style.transform = ''; gearUI('P'); };
 }
-function toPark() { clearWasted(); reset(); G.state = 'attract'; G.v = 0; $('hud').classList.add('hidden'); $('over').classList.add('hidden'); $('banner').classList.add('hidden'); $('start').classList.remove('hidden'); window.__resetShifter(); }
-setInterval(() => { const d = new Date(); $('ptime').textContent = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase(); }, 5000);
-$('ptime').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase();
+function toPark() { clearWasted(); reset(); G.state = 'attract'; G.v = 0; $('hud').classList.add('hidden'); $('over').classList.add('hidden'); $('banner').classList.add('hidden'); $('start').classList.remove('hidden'); window.__resetShifter(); window.__parkDraw && setTimeout(window.__parkDraw, 30); }
+// ---- parked screen (rev 2.1): studio 3/4 render of the ego Model 3 + Tesla-style controls ----
+{ const cv = $('pcar'), r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); r.setPixelRatio(Math.min(devicePixelRatio, 2)); r.toneMapping = renderer.toneMapping; r.outputColorSpace = renderer.outputColorSpace;
+  const sc = new THREE.Scene(); sc.environment = scene.environment; sc.add(new THREE.HemisphereLight(0xffffff, 0x8a8c90, 1.5)); const dl = new THREE.DirectionalLight(0xffffff, 2.4); dl.position.set(-5, 9, -4); sc.add(dl);
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.scale.set(1.25, 2.7, 1); sh.position.y = 0.01; sc.add(sh);
+  const cam = new THREE.PerspectiveCamera(24, 1, 0.1, 100); let car = null, lastKey = '';
+  const draw = () => { if ($('start').classList.contains('hidden')) return; const w = cv.clientWidth, h = cv.clientHeight; if (!w || !h) return;
+    const key = w + 'x' + h + ':' + (model3.userData.paintKey || '') + roadster.visible; 
+    if (cv.width !== Math.round(w * r.getPixelRatio()) || cv.height !== Math.round(h * r.getPixelRatio())) r.setSize(w, h, false);
+    if (car) sc.remove(car); car = model3.clone(true); car.visible = true; car.position.set(0, 0, 0); car.rotation.set(0, 0, 0); sc.add(car);
+    cam.aspect = w / h; const port = w / h < 1.1; cam.fov = port ? 30 : 22; cam.updateProjectionMatrix();
+    const az = window.__pkAz ?? -0.9, dist = (port ? 10.4 * Math.max(1, 0.62 / (w / h)) : 11) ; cam.position.set(Math.sin(az) * dist, dist * 0.36, -Math.cos(az) * dist); cam.lookAt(0.25, 0.45, -0.2); r.render(sc, cam); lastKey = key; };
+  window.__parkDraw = draw; addEventListener('resize', () => setTimeout(draw, 50)); setInterval(draw, 1000); setTimeout(draw, 100);
+  const sheet = $('psheet'); $('plock').addEventListener('click', () => sheet.classList.toggle('hidden')); $('psclose').addEventListener('click', () => sheet.classList.add('hidden'));
+  $('pfrunk').addEventListener('click', () => openLB()); $('ptrunk').addEventListener('click', () => sheet.classList.toggle('hidden'));
+  const mUI = () => { $('pmedia').classList.toggle('on', !sfx.muted); }; mUI();
+  $('pmedia').addEventListener('click', () => { sfx.init(); sfx.setMute(!sfx.muted); muteUI(); mUI(); toast(sfx.muted ? 'Sound off' : 'Sound on<small>Siren, engine & effects</small>', 1000); });
+  let tv = +(localStorage.getItem('fsdmm_temp') || 16); const tUI = () => { $('tval').textContent = tv.toFixed(1); localStorage.setItem('fsdmm_temp', tv); }; tUI();
+  $('tdn').addEventListener('click', () => { tv = Math.max(15, tv - 0.5); tUI(); }); $('tup').addEventListener('click', () => { tv = Math.min(28, tv + 0.5); tUI(); });
+  let seat = 0; $('pseat').addEventListener('click', () => { seat = (seat + 1) % 4; $('pseatL').textContent = '\u2022'.repeat(seat); $('pseat').classList.toggle('on', seat > 0); });
+}
 applySettings();
 
 if (qs.has('tune')) { // live tuning overlay
