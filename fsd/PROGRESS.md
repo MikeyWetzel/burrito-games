@@ -92,3 +92,10 @@ Mikey is unhappy with the car/truck models. They must look as close to identical
 - Viewer: `compare.html?type=glb-<name>`. `rounds9.sh N` writes the side-by-side sheets to `shots/v9/rounds/roundN/`, alongside the critiques.
 - The Model 3 hero, Y/S/X and Roadster (ego) and all traffic except the moto now come from these models. The Cybertruck and moto are still procedural.
 - Next: a Blender moto and Cybertruck, panel lines and handles on the ego, Highland C-shaped tail lamps, a flatter M3 roof arc.
+
+## Rev 2.0 — visible cop chase
+- Cop now spawns ~34 m back at +10 m/s and drives into view; camera eases back/up during a chase so he is on screen behind you.
+- Red/blue light bar + flashing PointLight and road glow (tints road and your car).
+- AI: elite phase (3–5 s after he reaches you): matches speed, threads traffic across 2 lanes/shoulder, brakes instead of crashing. Then tired: capped below you while you hold > limit+22 mph, slow reactions, can crash into traffic (WASTED-style wreck → escape). Escape when > 70 m back for 1.2 s.
+- WebAudio siren (wail, volume by distance), HUD "🚨 COP xx m" indicator with closeness bar.
+- ?cheat / ?test: press P during a run (or call FSDchase()) to start a chase instantly. Headless test: chase20.py → shots/v20/.
