@@ -1,4 +1,4 @@
-import { Unlocks } from './unlocks.js?v=2.7.1';
+import { Unlocks } from './unlocks.js?v=2.8.0';
 // Tesla-Controls-style settings screen. Persisted in localStorage; game listens via onChange.
 const KEY = 'fsdmm_settings';
 export const DEF = { theme: 'auto', density: 'normal', difficulty: 'standard', camera: 'near', quality: 'high', fps: false, sound: true, volume: 0.8, rsTime: 12, rsCharges: 3, cheat: false, model: 'm3', paint: 'pearl', exK: 1.6, exP: 1.7, space: 0.8 };
@@ -13,6 +13,9 @@ export const PAINTS = {
 export const CT_PAINTS = { stainless: ['Stainless Steel', '#b9bcbf'], satblack: ['Satin Black Wrap', '#232427'], satwhite: ['Satin White Wrap', '#dcdcd8'] };
 if (new URLSearchParams(location.search).has('cheat')) { SET.cheat = true; try { localStorage.setItem(KEY, JSON.stringify(SET)); } catch (e) {} } // ?cheat turns cheat mode on (persisted)
 export const paintList = m => m === 'ct' ? CT_PAINTS : PAINTS;
+// migration: any unknown/legacy vehicle (e.g. a saved 'roadster') falls back to the Model 3 in Pearl White; Roadster is power-up only
+if (!MODELS.some(m => m[0] === SET.model)) { SET.model = 'm3'; SET.paint = DEF.paint; }
+if (!paintList(SET.model)[SET.paint]) SET.paint = Object.keys(paintList(SET.model))[0];
 let cb = () => {};
 export const onChange = f => { cb = f; };
 const save = () => { localStorage.setItem(KEY, JSON.stringify(SET)); cb(SET); };
@@ -70,7 +73,7 @@ function body() {
       row(`Exaggeration curve (power) · ${SET.exP.toFixed(2)}`, `<div class="slrow">${slider('exP', 0.5, 3, 0.05)}</div>`) +
       row(`Traffic spacing at speed · ${SET.space.toFixed(2)}`, `<div class="slrow">${slider('space', 0, 2, 0.05)}</div>`) +
       `<p class="note">Closing speed × (1 + strength × t^power), t = 0 at the limit … 1 at 100 mph. Spacing widens gaps and thins traffic as t rises. Live: also on screen with ?tune.</p><button class="tile wide" data-act="tuneReset">${icon('gauge')}<span>Reset tuning</span></button>`;
-    case 'about': return `<div class="about"><b>FSD Mad Max</b><span>Rev ${hooks.rev}</span><p>Fan-made game, not affiliated with Tesla. Font: Montserrat (SIL OFL). Traffic car bases: Kenney Car Kit (CC0), restyled. Everything else drawn procedurally.</p>
+    case 'about': return `<div class="about"><b>FSD Mad Max</b><span>Rev ${hooks.rev}</span><p>Fan-made game, not affiliated with Tesla. Font: Montserrat (SIL OFL). All vehicles and everything else are our own procedural geometry.</p>
       <button class="tile wide" data-act="resetUnlocks">${icon('lock')}<span>Reset unlocks &amp; progress</span></button>${SET.cheat ? `<button class="tile wide" data-act="unlockAll">${icon('lock')}<span>Unlock Roadster &amp; Tunnels now</span></button>` : ''}</div>`;
   }
 }

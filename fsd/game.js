@@ -1,7 +1,7 @@
-import { SET, onChange, initSettings, openSettings, isLight, paintList, icon, saveSettings } from './settings.js?v=2.7.1';
-import { Unlocks } from './unlocks.js?v=2.7.1';
-import { buildVehicle } from './vehicles.js?v=2.7.1';
-import { showWasted, hideWasted, plateHTML, lastName, cleanName, fetchTop, submit, renderList } from './lb.js?v=2.7.1';
+import { SET, onChange, initSettings, openSettings, isLight, paintList, icon, saveSettings } from './settings.js?v=2.8.0';
+import { Unlocks } from './unlocks.js?v=2.8.0';
+import { buildVehicle, buildEgoCar, M3, EGO_SPEC, RS_SPEC, buildCT } from './vehicles.js?v=2.8.0';
+import { showWasted, hideWasted, plateHTML, lastName, cleanName, fetchTop, submit, renderList } from './lb.js?v=2.8.0';
 import * as THREE from './vendor/three.module.min.js?v=r170';
 // ---- speed exaggeration + traffic spacing (tunable: Settings > Tuning, or ?tune overlay) ----
 const speedT = () => clamp((G.v / MPH - limitAt(S)) / (100 - limitAt(S)), 0, 1.6);
@@ -11,7 +11,7 @@ let RS_ON = Unlocks.has('roadster');
 const _x = 0, DENS = { low: 0.7, normal: 1, high: 1.3 }, CUT = { chill: 0.08, standard: 0.2, madmax: 0.4 }, QPR = { low: 1, med: 1.5, high: 2 };
 
 // ================= constants & helpers =================
-export const REV = '1.7.1'; // bump on every deploy
+export const REV = '1.8'; // bump on every deploy
 
 const W = 3.7;                 // lane width (m)
 const DMID = 1.5 * W;          // banking pivot
@@ -297,7 +297,7 @@ function wheels(g, zs, half, r, w = 0.26, hub = hubMat) {
 const GREY = 0xc9cacc, GLASS = 0x5d6066; // in-car FSD look (NATA refs): smooth off-white matte, glass a few shades darker
 const lowerMat = new THREE.MeshStandardMaterial({ color: 0xa9aaad, roughness: 0.9 }), kTire = new THREE.MeshStandardMaterial({ color: 0x3a3b3f, roughness: 0.9 }), kHub = new THREE.MeshStandardMaterial({ color: 0xe6e5e2, roughness: 0.8 });
 const blinkMat = new THREE.MeshBasicMaterial({ color: 0xffa51f });
-const brakeMat = new THREE.MeshBasicMaterial({ color: 0xff2a2a });
+const brakeMat = new THREE.MeshBasicMaterial({ color: 0xff2a2a }), tailDimMat = new THREE.MeshBasicMaterial({ color: 0x8a1c1c }); // tail lights: always dim red, bright when braking
 const smallBox = new THREE.BoxGeometry(1, 1, 1);
 function lights(g, L, Wd, y, front = true) {
   g.userData.blink = [[], []]; g.userData.brake = [];
@@ -305,9 +305,9 @@ function lights(g, L, Wd, y, front = true) {
     const arr = g.userData.blink[sd < 0 ? 0 : 1];
     const rear = new THREE.Mesh(smallBox, blinkMat); rear.scale.set(0.24, 0.14, 0.08); rear.position.set(sd * (Wd / 2 - 0.2), y, L / 2 + 0.02); g.add(rear); arr.push(rear);
     if (front) { const f = new THREE.Mesh(smallBox, blinkMat); f.scale.set(0.1, 0.12, 0.36); f.position.set(sd * (Wd / 2 + 0.01), y - 0.05, -L / 2 + 0.55); g.add(f); arr.push(f); }
-    const b = new THREE.Mesh(smallBox, brakeMat); b.scale.set(0.4, 0.12, 0.06); b.position.set(sd * (Wd / 2 - 0.45), y + 0.03, L / 2 + 0.01); g.add(b); g.userData.brake.push(b);
+    const b = new THREE.Mesh(smallBox, brakeMat); b.scale.set(0.42, 0.1, 0.1); b.position.set(sd * (Wd / 2 - 0.45), y + 0.03, L / 2 - 0.02); g.add(b); g.userData.brake.push(b);
   }
-  for (const m of [...g.userData.blink[0], ...g.userData.blink[1], ...g.userData.brake]) m.visible = false;
+  for (const m of [...g.userData.blink[0], ...g.userData.blink[1]]) m.visible = false; for (const m of g.userData.brake) m.material = tailDimMat;
 }
 // shared shape helpers
 function carBody(L, hw, belt, hood, deck, roof, gStart, gPeak0, gPeak1, gEnd, b, gl, gw) {
@@ -345,6 +345,7 @@ const TYPES = {
     g.add(loft([[-h, 1.05, 0.45, 2.9, 5], [-h + 0.12, 1.25, 0.4, 3.12, 7], [h - 0.12, 1.27, 0.4, 3.18, 8], [h, 1.08, 0.45, 2.95, 5]], b));
     g.add(loft([[-h + 0.02, 1.15, 1.55, 2.85, 6], [-h + 0.4, 1.29, 1.55, 2.85, 8], [h - 0.6, 1.29, 1.55, 2.85, 8], [h - 0.3, 1.2, 1.55, 2.8, 6]], gl));
     wheels(g, [-3.9, 3.6], 1.22, 0.5, 0.36); lights(g, 12.2, 2.55, 1.1, false); return g; } },
+  school: { L: 11.4, Wd: 2.45, H: 3.1, v: [23, 28], build() { return null; } },
   moto: { L: 2.2, Wd: 0.8, H: 1.5, v: [28, 36], build(b, gl) { const g = new THREE.Group();
     g.add(loft([[-1.0, 0.1, 0.5, 0.7, 2.5], [-0.7, 0.2, 0.42, 0.95, 3], [0.2, 0.22, 0.45, 0.95, 3], [0.9, 0.12, 0.55, 0.85, 2.5]], b));
     g.add(loft([[-0.1, 0.12, 0.95, 1.05, 2.4], [0.0, 0.2, 0.95, 1.45, 2.6], [0.25, 0.19, 0.95, 1.5, 2.6], [0.4, 0.12, 0.95, 1.1, 2.4]], b));
@@ -353,9 +354,9 @@ const TYPES = {
     lights(g, 2.2, 0.5, 0.8, false); return g; } },
 };
 // ---- rev 1.7: traffic bodies are built from scratch in vehicles.js (smooth lofted shells, vertex-coloured glass) ----
-const LIGHT_Y = { sedan: [0.86, true], suv: [1.02, true], pickup: [1.08, true], van: [1.05, true], box: [0.9, false], semi: [1.3, false], bus: [1.1, false], moto: [0.8, false] };
+const LIGHT_Y = { sedan: [0.86, true], suv: [1.02, true], pickup: [1.08, true], van: [1.05, true], box: [0.9, false], semi: [1.3, false], bus: [1.1, false], school: [1.0, false], moto: [0.8, false] };
 const tailMat0 = new THREE.MeshStandardMaterial({ color: 0x8a3a3a, roughness: 0.6 }), headMat0 = new THREE.MeshStandardMaterial({ color: 0xf4f4f0, roughness: 0.5 });
-const TYPE_W = [['sedan', 0.29], ['suv', 0.23], ['pickup', 0.13], ['van', 0.08], ['box', 0.09], ['semi', 0.11], ['bus', 0.03], ['moto', 0.04]];
+const TYPE_W = [['sedan', 0.29], ['suv', 0.23], ['pickup', 0.13], ['van', 0.08], ['box', 0.09], ['semi', 0.11], ['bus', 0.02], ['school', 0.02], ['moto', 0.04]];
 const pools = {}; for (const k in TYPES) pools[k] = [];
 function getVehicle(type) {
   const p = pools[type]; if (p.length) { const m = p.pop(); m.visible = true; return m; }
@@ -377,26 +378,18 @@ const EGO = { // carBody(L, hw, belt, hood, deck, roof, gStart, gPeak0, gPeak1, 
   m3: [[4.72, 0.93, 0.84, 0.7, 0.9, 1.42, -1.15, -0.2, 0.55, 2.05], 0.34], my: [[4.75, 0.96, 0.96, 0.84, 1.04, 1.62, -1.1, -0.3, 1.05, 2.18], 0.37],
   ms: [[4.98, 0.98, 0.82, 0.68, 0.9, 1.42, -1.25, -0.2, 0.8, 2.3], 0.35], mx: [[5.05, 1.0, 0.99, 0.86, 1.08, 1.68, -1.3, -0.45, 1.35, 2.38], 0.39] };
 const steelMat = new THREE.MeshPhysicalMaterial({ color: 0xb9bcbf, roughness: 0.38, metalness: 0.85, envMapIntensity: 1.3, flatShading: true });
+const egoTyre = new THREE.MeshStandardMaterial({ color: 0x1a1b1e, roughness: 0.9 }), egoRim = new THREE.MeshPhysicalMaterial({ color: 0x666a70, roughness: 0.35, metalness: 0.7, envMapIntensity: 1.2 });
 function buildEgo(kind, paint, glass) {
   const g = new THREE.Group();
-  if (kind === 'ct') { // angular wedge pickup
-    const ext = (pts, w, mat) => { const sh = new THREE.Shape(); sh.moveTo(pts[0][0], pts[0][1]); for (const p of pts.slice(1)) sh.lineTo(p[0], p[1]); sh.closePath();
-      const geo = new THREE.ExtrudeGeometry(sh, { depth: w, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 1 }); const m = new THREE.Mesh(geo, mat); m.rotation.y = -Math.PI / 2; m.position.x = w / 2; return m; };
-    g.add(ext([[-2.85, 0.42], [-2.85, 0.98], [-0.35, 1.92], [2.85, 1.22], [2.85, 0.42]], 2.0, paint));
-    g.add(ext([[-1.95, 1.33], [-0.35, 1.93], [0.95, 1.67], [0.95, 1.33]], 2.04, glass));
-    const bar = new THREE.Mesh(smallBox, tailMat); bar.scale.set(1.9, 0.05, 0.04); bar.position.set(0, 1.16, 2.9); g.add(bar);
-    const fb = new THREE.Mesh(smallBox, new THREE.MeshBasicMaterial({ color: 0xffffff })); fb.scale.set(1.9, 0.04, 0.04); fb.position.set(0, 0.97, -2.9); g.add(fb);
-    wheels(g, [-1.85, 1.85], 1.02, 0.42, 0.3, darkTrim);
+  if (kind === 'ct') { g.add(buildCT(paint, glass, darkTrim, tailMat, egoTyre, egoRim));
   } else {
-    const [p, r] = EGO[kind] || EGO.m3, L = p[0], h = L / 2, hw = p[1];
-    g.add(carBody(...p, paint, glass, hw - 0.13)); wheels(g, [-h + 0.92, h - 0.93], hw - 0.01, r, 0.24, darkTrim);
-    const ty = p[2] - 0.04;
-    for (const sd of [-1, 1]) {
-      const t = new THREE.Mesh(smallBox, tailMat); t.scale.set(0.5, 0.07, 0.05); t.position.set(sd * hw * 0.6, ty, h - 0.0); t.rotation.y = sd * 0.12; g.add(t);
-      const t2 = new THREE.Mesh(smallBox, tailMat); t2.scale.set(0.05, 0.07, 0.32); t2.position.set(sd * (hw - 0.05), ty, h - 0.18); g.add(t2);
-      const mr = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), paint); mr.scale.set(1.1, 0.7, 0.8); mr.position.set(sd * (hw + 0.07), p[2] + 0.08, p[6] + 0.2); g.add(mr);
+    const sp = EGO_SPEC[kind] || EGO_SPEC.m3, h = sp.L / 2, hw = sp.W / 2;
+    g.add(buildEgoCar(sp, paint, glass, darkTrim, egoTyre, egoRim));
+    const ty = sp.deck - 0.1;
+    for (const sd of [-1, 1]) { // wrap-around tail lamps + door mirrors
+      const t = new THREE.Mesh(smallBox, tailMat); t.scale.set(0.46, 0.07, 0.08); t.position.set(sd * hw * 0.58, ty, h - 0.05); t.rotation.y = sd * 0.18; g.add(t);
+      const mr = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), glass); mr.scale.set(1.2, 0.65, 0.8); mr.position.set(sd * (hw + 0.04), sp.belt0 + 0.1, sp.gs + 0.35); g.add(mr);
     }
-    const diff = new THREE.Mesh(smallBox, darkTrim); diff.scale.set(1.3, 0.14, 0.05); diff.position.set(0, 0.42, h - 0.01); g.add(diff);
   }
   g.traverse(m => { if (m.isMesh) m.castShadow = true; }); return g;
 }
@@ -410,12 +403,10 @@ function setEgoModel(kind, hex) {
 setEgoModel('m3', '#f4f5f6');
 const roadsterPaint = new THREE.MeshPhysicalMaterial({ color: 0xd0101c, roughness: 0.25, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.1, envMapIntensity: 1.2 });
 const roadster = new THREE.Group();
-roadster.add(loft([[-2.2, 0.5, 0.32, 0.44, 2.4], [-2.1, 0.82, 0.26, 0.5, 3.2], [-1.6, 0.95, 0.24, 0.57, 4], [-0.6, 0.98, 0.24, 0.66, 4.4], [0.3, 0.99, 0.24, 0.74, 4.4], [1.2, 0.99, 0.26, 0.8, 4.4], [1.85, 0.94, 0.3, 0.78, 4], [2.12, 0.8, 0.36, 0.7, 3], [2.2, 0.55, 0.42, 0.62, 2.4]], roadsterPaint));
-roadster.add(loft([[-0.35, 0.5, 0.66, 0.7, 2.4], [-0.15, 0.6, 0.66, 0.84, 2.8], [0.25, 0.62, 0.66, 1.0, 3], [0.75, 0.6, 0.68, 1.02, 3], [1.15, 0.52, 0.7, 0.84, 2.8], [1.35, 0.42, 0.72, 0.76, 2.4]], blackGlass));
-wheels(roadster, [-1.4, 1.38], 0.98, 0.35, 0.28, darkTrim);
-const rtail = new THREE.Mesh(smallBox, tailMat); rtail.scale.set(1.6, 0.05, 0.04); rtail.position.set(0, 0.68, 2.19); roadster.add(rtail);
+roadster.add(buildEgoCar(RS_SPEC, roadsterPaint, blackGlass, darkTrim, egoTyre, egoRim));
+const rtail = new THREE.Mesh(smallBox, tailMat); rtail.scale.set(1.6, 0.05, 0.04); rtail.position.set(0, 0.74, 2.0); roadster.add(rtail);
 const nozzleMat = new THREE.MeshBasicMaterial({ color: 0x8fd0ff });
-for (const sd of [-1, 1]) { const n = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, 0.16, 12), nozzleMat); n.rotation.x = Math.PI / 2; n.position.set(sd * 0.42, 0.46, 2.2); roadster.add(n); }
+for (const sd of [-1, 1]) { const n = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, 0.16, 12), nozzleMat); n.rotation.x = Math.PI / 2; n.position.set(sd * 0.42, 0.42, 2.0); roadster.add(n); }
 for (const g of [model3, roadster]) { g.traverse(m => { if (m.isMesh) m.castShadow = true; }); egoGroup.add(g); }
 { // FSD v14-style blue underglow beneath the ego car
   const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d');
@@ -543,8 +534,8 @@ const laneFree = (lane, s, me, gap) => !cars.some(o => o !== me && (o.lane === l
 // ================= cop chase =================
 const copMesh = (() => { const bm = new THREE.MeshStandardMaterial({ color: GREY, roughness: 0.8, vertexColors: true });
   const g = buildVehicle('cop', bm); const red = new THREE.MeshBasicMaterial({ color: 0xff2a2a }), wht = new THREE.MeshBasicMaterial({ color: 0xffffff }), off = new THREE.MeshStandardMaterial({ color: 0x55585e });
-  const base = new THREE.Mesh(smallBox, off); base.scale.set(1.2, 0.08, 0.32); base.position.set(0, 1.47, 0.25); g.add(base);
-  const L = new THREE.Mesh(smallBox, red), R = new THREE.Mesh(smallBox, wht); L.scale.set(0.55, 0.13, 0.3); R.scale.set(0.55, 0.13, 0.3); L.position.set(-0.3, 1.56, 0.25); R.position.set(0.3, 1.56, 0.25); g.add(L, R);
+  const base = new THREE.Mesh(smallBox, off); base.scale.set(1.3, 0.07, 0.3); base.position.set(0, 1.79, 0.15); g.add(base);
+  const L = new THREE.Mesh(smallBox, red), R = new THREE.Mesh(smallBox, wht); L.scale.set(0.6, 0.09, 0.26); R.scale.set(0.6, 0.09, 0.26); L.position.set(-0.32, 1.84, 0.15); R.position.set(0.32, 1.84, 0.25); g.add(L, R);
   const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d'); const gr = x.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, '#fff'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
   const gm2 = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xff3030 });
   const glow = new THREE.Mesh(new THREE.PlaneGeometry(9, 12), gm2); glow.rotation.x = -Math.PI / 2; glow.position.y = 0.05; g.add(glow);
@@ -653,7 +644,7 @@ function updateTraffic(dt) {
     m.rotation.set(Math.atan(slopeY(c.s)), -Math.atan(slopeX(c.s) + clamp(c.yaw, -0.3, 0.3) + yawRamp), -bank(c.s));
     const bl = m.userData.blink; const side = c.lc ? (c.lc.to > c.lc.from ? 1 : 0) : -1;
     for (let s2 = 0; s2 < 2; s2++) for (const x of bl[s2]) x.visible = side === s2 && blinkOn;
-    for (const b of m.userData.brake) b.visible = c.braking;
+    for (const b of m.userData.brake) b.material = c.braking ? brakeMat : tailDimMat;
   }
   // in-path vehicle tint (FSD shows the lead car in your path in blue)
   let lead = null, lg = 70;
