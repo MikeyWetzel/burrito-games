@@ -1,4 +1,4 @@
-import { Unlocks } from './unlocks.js?v=2.5.0';
+import { Unlocks } from './unlocks.js?v=2.6.0';
 // Tesla-Controls-style settings screen. Persisted in localStorage; game listens via onChange.
 const KEY = 'fsdmm_settings';
 export const DEF = { theme: 'auto', density: 'normal', difficulty: 'standard', camera: 'near', quality: 'high', fps: false, sound: true, volume: 0.8, rsTime: 12, rsCharges: 3, model: 'm3', paint: 'pearl', exK: 1.6, exP: 1.7, space: 0.8 };
@@ -68,7 +68,7 @@ function body() {
       row(`Traffic spacing at speed · ${SET.space.toFixed(2)}`, `<div class="slrow">${slider('space', 0, 2, 0.05)}</div>`) +
       `<p class="note">Closing speed × (1 + strength × t^power), t = 0 at the limit … 1 at 100 mph. Spacing widens gaps and thins traffic as t rises. Live: also on screen with ?tune.</p><button class="tile wide" data-act="tuneReset">${icon('gauge')}<span>Reset tuning</span></button>`;
     case 'about': return `<div class="about"><b>FSD Mad Max</b><span>Rev ${hooks.rev}</span><p>Fan-made game, not affiliated with Tesla. Font: Montserrat (SIL OFL). Traffic car bases: Kenney Car Kit (CC0), restyled. Everything else drawn procedurally.</p>
-      <button class="tile wide" data-act="resetUnlocks">${icon('lock')}<span>Reset unlocks</span></button></div>`;
+      <button class="tile wide" data-act="resetUnlocks">${icon('lock')}<span>Reset unlocks &amp; progress</span></button></div>`;
   }
 }
 function render() {
