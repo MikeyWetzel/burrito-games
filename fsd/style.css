@@ -99,3 +99,9 @@ html.land .how{flex-direction:row;gap:calc(var(--u)*5)}html.land .how b{min-widt
 #speed{transition:color .2s}
 
 #cheatTag{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 62px);transform:translateX(-50%);font:700 11px/1 system-ui,sans-serif;letter-spacing:.12em;color:#fff;background:#d4232f;padding:4px 8px;border-radius:6px;z-index:5;pointer-events:none}
+
+#copInd{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 84px);transform:translateX(-50%);display:flex;align-items:center;gap:8px;font:800 13px/1 system-ui,sans-serif;color:#fff;background:rgba(10,12,20,.78);padding:6px 10px;border-radius:10px;z-index:5;pointer-events:none;animation:copb .5s steps(1) infinite;border:2px solid #ff2a2a}
+#copInd em{display:block;width:90px;height:7px;background:#333;border-radius:4px;overflow:hidden}#copInd i{display:block;height:100%;width:0;background:linear-gradient(90deg,#2a5cff,#ff2a2a)}
+#copInd.close{background:rgba(160,10,20,.85)}#copInd.hidden{display:none}
+@keyframes copb{0%{border-color:#ff2a2a}50%{border-color:#2a5cff}}
+@media (orientation:portrait){#copInd{top:calc(env(safe-area-inset-top) + 196px);font-size:12px;white-space:nowrap}#copInd span,#copInd b{white-space:nowrap}}
