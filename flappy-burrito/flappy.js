@@ -113,7 +113,11 @@
   }
 
   /* ---------- pipes (classic green w/ salsa drip on the lip) ---------- */
-  var PIPE_W = 26, GAP = 50, PIPE_SPACING = 78, SPEED = 1;
+  var PIPE_W = 26, SPEED = 1;
+  // Difficulty ramp (rev 1.4): roomy gap + spacing at the start, tightening slowly over the first RAMP pipes.
+  var GAP0 = 72, GAP1 = 56, SPACE0 = 100, SPACE1 = 86, RAMP = 40, spawned = 0;
+  function ramp(a, b) { return a + (b - a) * Math.min(1, spawned / RAMP); }
+  var GAP = GAP0, PIPE_SPACING = SPACE0;
   function drawPipeBody(x, y, h) {
     if (h <= 0) return;
     px(x + 1, y, PIPE_W - 2, h, '#73bf2e');
@@ -131,7 +135,7 @@
   function drawPipe(p) {
     var x = Math.round(p.x);
     drawPipeBody(x + 1, 0, p.gapY - 12); drawLip(x - 0, p.gapY - 12, false);
-    drawLip(x, p.gapY + GAP, true); drawPipeBody(x + 1, p.gapY + GAP + 12, GROUND_Y - (p.gapY + GAP + 12));
+    drawLip(x, p.gapY + p.gap, true); drawPipeBody(x + 1, p.gapY + p.gap + 12, GROUND_Y - (p.gapY + p.gap + 12));
   }
 
   /* ---------- medals ---------- */
@@ -168,18 +172,20 @@
   function buzz(ms) { if (navigator.vibrate) try { navigator.vibrate(ms); } catch (e) { } }
 
   /* ---------- game state ---------- */
-  // Additive tap impulse (old: set vy = -3.9 per flap). Each tap adds TAP (~45% of old) to vy,
-  // after softening any fall to FALL_SOFT so taps bite while dropping; upward speed capped at UP_CAP.
-  var GRAV = 0.25, TAP = -1.75, FALL_SOFT = 1.5, UP_CAP = -3.4, MAXV = 8, FLAP = TAP;
+  // Rev 1.4 floaty tuning (units: logical px per 60 Hz tick; physics runs on a fixed 60 Hz step so it is frame-rate independent).
+  // A flap SETS vy to FLAP (no stacking/rocketing); gravity is gentle and the fall speed is capped low.
+  var GRAV = 0.11, FLAP = -2.2, MAXV = 2.8;
   var state, bird, pipes, score, best = +localStorage.getItem('fb-best') || 0, groundOff = 0, frame = 0, flash = 0, overT = 0, isNewBest = false;
   function reset() {
-    state = 'ready'; score = 0; pipes = []; frame = 0; overT = 0; isNewBest = false;
+    state = 'ready'; score = 0; pipes = []; spawned = 0; frame = 0; overT = 0; isNewBest = false;
     bird = { x: 38, y: 118, vy: 0, rot: 0, flapT: 0 };
   }
-  function spawnPipe(x) { pipes.push({ x: x, gapY: 30 + Math.floor(Math.random() * (GROUND_Y - GAP - 70)), scored: false }); }
+  function spawnPipe(x) { var gap = Math.round(ramp(GAP0, GAP1)), prev = pipes[pipes.length - 1], lo = 30, hi = GROUND_Y - gap - 40, y = lo + Math.floor(Math.random() * (hi - lo));
+    if (prev && spawned < RAMP / 2) y = Math.max(prev.gapY - 50, Math.min(prev.gapY + 50, y)); // early pipes: no huge jumps between gaps
+    pipes.push({ x: x, gapY: y, gap: gap, scored: false }); spawned++; PIPE_SPACING = ramp(SPACE0, SPACE1); }
   function flap() {
     if (state === 'ready') { state = 'play'; try { window.BurritoPlay && window.BurritoPlay('flappy-burrito'); } catch (e) {} spawnPipe(LW + 40); spawnPipe(LW + 40 + PIPE_SPACING); }
-    if (state === 'play') { bird.vy = Math.max(UP_CAP, Math.min(bird.vy, FALL_SOFT) + TAP); sfx.wing(); }
+    if (state === 'play') { bird.vy = FLAP; sfx.wing(); }
   }
   function die() {
     if (state === 'dead' || state === 'over') return;
@@ -212,7 +218,7 @@
     if (state === 'over') { overT++; return; }
     // play or dead: physics
     bird.vy = Math.min(MAXV, bird.vy + GRAV); bird.y += bird.vy;
-    if (bird.vy < 0) bird.rot = -25; else if (bird.vy > 2.5) bird.rot = Math.min(90, bird.rot + 4.5);
+    if (bird.vy < 0) bird.rot = -25; else if (bird.vy > 1.6) bird.rot = Math.min(70, bird.rot + 3);
     if (state === 'play') {
       bird.flapT++;
       pipes.forEach(function (p) {
@@ -225,7 +231,7 @@
       var bx0 = bird.x - 7, bx1 = bird.x + 7, by0 = bird.y - 4, by1 = bird.y + 4;
       if (by0 < -20) { bird.y = -15; }
       pipes.forEach(function (p) {
-        if (bx1 > p.x && bx0 < p.x + PIPE_W && (by0 < p.gapY || by1 > p.gapY + GAP)) die();
+        if (bx1 > p.x && bx0 < p.x + PIPE_W && (by0 < p.gapY || by1 > p.gapY + p.gap)) die();
       });
     }
     if (bird.y + 5 >= GROUND_Y) { bird.y = GROUND_Y - 5; if (state === 'play') die(); bird.vy = 0; if (state === 'dead') { state = 'over'; overT = 0; } }
@@ -292,6 +298,6 @@
 
   window.FlappyBurrito = {
     get state() { return { state: state, score: score, best: best, y: bird.y, pipes: pipes.length }; },
-    get pipes() { return pipes; }, get bird() { return bird; }, input: input, step: step, render: render, consts: { GAP: GAP, PIPE_W: PIPE_W }
+    get pipes() { return pipes; }, get bird() { return bird; }, input: input, step: step, render: render, consts: { GAP0: GAP0, GAP1: GAP1, SPACE0: SPACE0, SPACE1: SPACE1, GRAV: GRAV, FLAP: FLAP, MAXV: MAXV, PIPE_W: PIPE_W }
   };
 })();
