@@ -82,3 +82,7 @@ html.light #tr .stat span,html.light #tr .stat b,html.light #tr .mode,html.light
 html.light #tr .stat b{color:#171a20!important}html.light #nav{background:#ffffffe8;color:#171a20}html.light #nav *{color:#171a20}
 html.land .tiles{grid-template-columns:repeat(auto-fill,minmax(11em,1fr))}html.land .tile{min-height:8em}
 html.light #nav svg path{stroke:#171a20}
+
+#bustedTxt{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;pointer-events:none;background:linear-gradient(transparent 38%,#000a 44%,#000a 56%,transparent 62%)}
+#bustedTxt span{font:900 clamp(40px,13vw,140px)/1 Montserrat,sans-serif;letter-spacing:.04em;color:#2f7de1;-webkit-text-stroke:3px #000;text-shadow:0 4px 18px #000;animation:bz .6s ease-out}
+@keyframes bz{from{transform:scale(1.6);opacity:0}to{transform:none;opacity:1}}
