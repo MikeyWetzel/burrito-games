@@ -1,13 +1,15 @@
-import { SET, onChange, initSettings, openSettings, isLight, paintList, icon, saveSettings } from './settings.js?v=2.4.0';
+import { SET, onChange, initSettings, openSettings, isLight, paintList, icon, saveSettings } from './settings.js?v=2.5.0';
+import { Unlocks } from './unlocks.js?v=2.5.0';
 import * as THREE from './vendor/three.module.min.js?v=r170';
 // ---- speed exaggeration + traffic spacing (tunable: Settings > Tuning, or ?tune overlay) ----
 const speedT = () => clamp((G.v / MPH - limitAt(S)) / (100 - limitAt(S)), 0, 1.6);
 const exagF = () => 1 + SET.exK * Math.pow(speedT(), SET.exP); // multiplier on closing speed
 const spaceF = () => 1 + SET.space * Math.min(1, speedT());
-const RS_ON = true, DENS = { low: 0.7, normal: 1, high: 1.3 }, CUT = { chill: 0.08, standard: 0.2, madmax: 0.4 }, QPR = { low: 1, med: 1.5, high: 2 };
+let RS_ON = Unlocks.has('roadster');
+const _x = 0, DENS = { low: 0.7, normal: 1, high: 1.3 }, CUT = { chill: 0.08, standard: 0.2, madmax: 0.4 }, QPR = { low: 1, med: 1.5, high: 2 };
 
 // ================= constants & helpers =================
-export const REV = '1.4'; // bump on every deploy
+export const REV = '1.5'; // bump on every deploy
 
 const W = 3.7;                 // lane width (m)
 const DMID = 1.5 * W;          // banking pivot
@@ -38,7 +40,7 @@ const slopeY = s => (roadY(s + 1) - roadY(s - 1)) * 0.5;
 const bank = s => clamp((roadX(s + 6) - 2 * roadX(s) + roadX(s - 6)) / 36 * 40, -0.075, 0.075);
 
 // ---- lane layout per 1.2 km segment: 0 plain 3-lane, 1 four-lane stretch, 2 exit ramp ----
-const TUN_ON = true;
+let TUN_ON = Unlocks.has('tunnels'); // unlockable
 const segType = k => { if (k < 1) return 0; if (k === 2) return TUN_ON ? 3 : 1; const h = hash(k * 9.7 + 1); const t = h < 0.25 ? 0 : h < 0.5 ? 1 : h < 0.75 ? 2 : 3; return t === 3 && !TUN_ON ? 0 : t; };
 // ---- tunnel: circular bore, floor chord = road; drive up the walls and onto the ceiling
 const T0 = 250, T1 = 950, RT = 7.5, YC = 4.5, HALF = Math.sqrt(RT * RT - YC * YC), ALPHA = Math.asin(YC / RT);
@@ -290,7 +292,7 @@ function wheels(g, zs, half, r, w = 0.26, hub = hubMat) {
     const h = new THREE.Mesh(geo[1], hub); h.rotation.y = sd * Math.PI / 2; h.position.set(sd * (half + 0.003), r, z); g.add(h);
   }
 }
-const GREY = 0xdedddb, GLASS = 0x8f9196; // in-car FSD look (NATA refs): smooth off-white matte, glass a few shades darker
+const GREY = 0xdedddb, GLASS = 0x5d6066; // in-car FSD look (NATA refs): smooth off-white matte, glass a few shades darker
 const lowerMat = new THREE.MeshStandardMaterial({ color: 0xa9aaad, roughness: 0.9 }), kTire = new THREE.MeshStandardMaterial({ color: 0x3a3b3f, roughness: 0.9 }), kHub = new THREE.MeshStandardMaterial({ color: 0xe6e5e2, roughness: 0.8 });
 const blinkMat = new THREE.MeshBasicMaterial({ color: 0xffa51f });
 const brakeMat = new THREE.MeshBasicMaterial({ color: 0xff2a2a });
@@ -349,7 +351,7 @@ const TYPES = {
     lights(g, 2.2, 0.5, 0.8, false); return g; } },
 };
 // ---- Kenney Car Kit (CC0) bases, baked to models/traffic.json (per-face class: 0 body, 1 glass, 2 tire/dark, 3 hub, 4 tail, 5 head, 6 lower) and restyled ----
-const KM = await fetch('models/traffic.json?v=2.4.0').then(r => r.json()).catch(() => ({}));
+const KM = await fetch('models/traffic.json?v=2.5.0').then(r => r.json()).catch(() => ({}));
 const KMAP = { sedan: 'sedan', suv: 'suv', pickup: 'truck', van: 'van', box: 'delivery' }, kGeo = {};
 function kenneyGeo(name, T) {
   if (kGeo[name + T.L]) return kGeo[name + T.L];
@@ -441,7 +443,16 @@ roadster.visible = false;
 
 // ---- pickup token ----
 const pickup = new THREE.Group();
-const pkGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.75, 0), new THREE.MeshStandardMaterial({ color: 0xff2b3a, emissive: 0xc0101c, emissiveIntensity: 0.9, roughness: 0.3, flatShading: true }));
+const pkGem = (() => { // Plaid-style badge, our own drawing: dark disc, red rim, woven white/red bands
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256; const x = cv.getContext('2d');
+  x.fillStyle = '#16171b'; x.beginPath(); x.arc(128, 128, 124, 0, 7); x.fill(); x.save(); x.beginPath(); x.arc(128, 128, 104, 0, 7); x.clip();
+  for (let i = -3; i <= 3; i++) { x.fillStyle = i % 2 ? '#e8e8ea' : '#e31b2b'; x.globalAlpha = 0.9; x.fillRect(118 + i * 30, 0, 14, 256); x.globalAlpha = 0.75; x.fillRect(0, 118 + i * 30, 256, 14); }
+  x.restore(); x.globalAlpha = 1; x.lineWidth = 14; x.strokeStyle = '#e31b2b'; x.beginPath(); x.arc(128, 128, 112, 0, 7); x.stroke(); x.lineWidth = 3; x.strokeStyle = '#fff'; x.beginPath(); x.arc(128, 128, 102, 0, 7); x.stroke();
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const face = new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: 0xffffff, emissiveIntensity: 0.7, roughness: 0.35, metalness: 0.3 });
+  const rim = new THREE.MeshStandardMaterial({ color: 0xe31b2b, emissive: 0xa0101a, emissiveIntensity: 0.8, roughness: 0.3, metalness: 0.5 });
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.14, 40), [rim, face, face]); disc.rotation.x = Math.PI / 2;
+  const g = new THREE.Group(); g.add(disc); return g; })();
 pkGem.position.y = 1.4; pkGem.castShadow = true;
 const pkRing = new THREE.Mesh(new THREE.RingGeometry(1.2, 1.55, 40), new THREE.MeshBasicMaterial({ color: 0xff3344, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false }));
 pkRing.rotation.x = -Math.PI / 2; pkRing.position.y = 0.06;
@@ -521,7 +532,7 @@ const egoDims = () => roadster.visible ? { L: 4.1, Wd: 2.02 } : { L: 4.7, Wd: 1.
 
 function reset() {
   for (const c of cars) freeVehicle(c.mesh); cars = [];
-  Object.assign(G, { cutIns: 0, hardBrake: false, brakeVis: 0, roofLands: 0, vy: 0, onRoof: null, boost: 0, pitch: 0, passPts: 0, wall: 0, tgtMph: limitAt(S), minRatio: 9, rearHits: 0, t: 0, v: limitAt(S) * MPH, mph: 70, topMph: 70, dist: 0, passed: 0, near: 0, jumps: 0, score: 0, egoD: laneC(1), tgtD: laneC(1), egoVd: 0, yaw: 0, jumpT: -1, jumpH: 0, rsT: 0, charges: 0, cool: 0, crashT: 0, spin: 0, spinV: 0, shake: 0, pickupOn: false, camD: laneC(1) });
+  Object.assign(G, { cop: null, speedT: 0, copAt: rnd(3, 6), copCd: 0, copWrecks: 0, copEscapes: 0, busted: false, cloud: null, cloudOn: false, cloudNext: 0, clouds: 0, cutIns: 0, hardBrake: false, brakeVis: 0, roofLands: 0, vy: 0, onRoof: null, boost: 0, pitch: 0, passPts: 0, wall: 0, tgtMph: limitAt(S), minRatio: 9, rearHits: 0, t: 0, v: limitAt(S) * MPH, mph: 70, topMph: 70, dist: 0, passed: 0, near: 0, jumps: 0, score: 0, egoD: laneC(1), tgtD: laneC(1), egoVd: 0, yaw: 0, jumpT: -1, jumpH: 0, rsT: 0, charges: 0, cool: 0, crashT: 0, spin: 0, spinV: 0, shake: 0, pickupOn: false, camD: laneC(1) });
   G.nextPickup = S + 500; setRoadster(false);
   for (let i = 0; i < 9; i++) spawnCar(S + 60 + i * 42 + rnd(0, 20));
 }
@@ -543,6 +554,68 @@ function spawnCar(sPos, avoidEgo = false) {
 }
 const laneFree = (lane, s, me, gap) => !cars.some(o => o !== me && (o.lane === lane || (o.lc && o.lc.to === lane)) && Math.abs(o.s - s) < gap + (o.L + me.L) / 2);
 
+
+// ================= cop chase =================
+const copMesh = (() => { const bm = new THREE.MeshStandardMaterial({ color: GREY, roughness: 0.85 }), gm = new THREE.MeshStandardMaterial({ color: GLASS, roughness: 0.6 });
+  const g = TYPES.sedan.build(bm, gm); const red = new THREE.MeshBasicMaterial({ color: 0xff2a2a }), wht = new THREE.MeshBasicMaterial({ color: 0xffffff }), off = new THREE.MeshStandardMaterial({ color: 0x55585e });
+  const base = new THREE.Mesh(smallBox, off); base.scale.set(1.2, 0.08, 0.32); base.position.set(0, 1.47, 0.25); g.add(base);
+  const L = new THREE.Mesh(smallBox, red), R = new THREE.Mesh(smallBox, wht); L.scale.set(0.55, 0.13, 0.3); R.scale.set(0.55, 0.13, 0.3); L.position.set(-0.3, 1.56, 0.25); R.position.set(0.3, 1.56, 0.25); g.add(L, R);
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d'); const gr = x.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, '#fff'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
+  const gm2 = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xff3030 });
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(9, 12), gm2); glow.rotation.x = -Math.PI / 2; glow.position.y = 0.05; g.add(glow);
+  g.userData.bar = [L, R, red, wht, gm2]; g.rotation.order = 'YXZ'; g.visible = false; g.traverse(m => { if (m.isMesh && m !== glow) m.castShadow = true; }); scene.add(g); return g; })();
+const COP_MAX = 138 * MPH; // under the Roadster's 150 max: flat out you slowly escape
+function updateCop(dt) {
+  const lim = limitAt(S);
+  if (G.state === 'play' && !G.cop) {
+    G.copCd -= dt; G.speedT = roadster.visible && G.v / MPH > lim + 30 ? G.speedT + dt : Math.max(0, G.speedT - dt * 2); // chases only happen in Roadster mode
+    if (roadster.visible && G.rsT > 3 && G.speedT > G.copAt && G.copCd <= 0 && !tunnelAt(S) && !tunnelAt(S - 120)) {
+      G.cop = { s: S - 95, d: G.egoD, v: G.v + 4, hold: 0, bumps: 0, far: 0, crashed: 0, spin: 0, vy: 0, h: 0 }; G.speedT = 0; G.copAt = rnd(3, 6); G.cloudNext = S + rnd(250, 400);
+      toast('🚨 Police behind you<small>Outrun it or make it crash</small>', 1600); sfx.ping && sfx.ping(); }
+  }
+  const c = G.cop; copMesh.visible = !!c; if (!c) return;
+  const gap = S - c.s, flash = (performance.now() % 500) < 250, bar = copMesh.userData.bar;
+  bar[0].material = flash ? bar[2] : bar[3]; bar[1].material = flash ? bar[3] : bar[2]; bar[4].color.setHex(flash ? 0xff3030 : 0x8090ff); bar[4].opacity = 0.55;
+  if (c.crashed) { c.crashed += dt; c.v *= Math.exp(-dt * 1.5); c.s += c.v * dt; c.vy -= GRAV * dt; c.h = Math.max(0, c.h + c.vy * dt); if (c.h === 0) c.vy = Math.abs(c.vy) * 0.3; c.spin += dt * 6 * Math.exp(-c.crashed);
+    if (c.crashed > 3 || gap > 200) { G.cop = null; G.copCd = 20; } }
+  else if (G.state === 'play') {
+    // chase: close fast when far, ease in to bump when near; never faster than COP_MAX
+    const want = gap > 14 ? G.v + 7 : G.v + 1.6; c.v += clamp(want - c.v, -9 * dt, 6 * dt); c.v = Math.min(c.v, COP_MAX); c.s += c.v * dt;
+    const blk = cars.find(o => Math.abs(o.d - c.d) < 1.9 && o.s > c.s && o.s - c.s < 16 + (c.v - o.v) * 1.2);
+    let td = G.egoD; if (blk) { const alt = [c.d - W, c.d + W].filter(d => d > 1 && d < maxD(c.s) && !cars.some(o => Math.abs(o.d - d) < 2 && Math.abs(o.s - c.s) < 12)); td = alt.length ? alt.sort((a, b) => Math.abs(a - G.egoD) - Math.abs(b - G.egoD))[0] : c.d; }
+    c.d += clamp(td - c.d, -3.2 * dt, 3.2 * dt);
+    for (const o of cars) if (Math.abs(o.s - c.s) < (o.L + 4.8) / 2 * 0.9 && Math.abs(o.d - c.d) < (o.Wd + 1.86) / 2 * 0.85) { // cop hits traffic
+      c.crashed = 0.001; c.vy = 6; G.copWrecks++; G.shake = 0.5; sfx.crash(); toast('COP WRECKED +1500', 1200);
+      for (let i = 0; i < 30; i++) emit(c.s + rnd(-1, 2), c.d + rnd(-1, 1), 0.6, c.v * 0.5, rnd(-4, 4), rnd(0, 3), 1, 0.6, rnd(3, 6), 0.6, 0xa9acb0); break; }
+    if (!c.crashed && G.cloud && Math.abs(c.s - G.cloud.s) < 7 && Math.abs(c.d - G.cloud.d) < 4.5) { c.crashed = 0.001; c.vy = 7; G.copWrecks++; G.shake = 0.5; sfx.crash(); toast('COP BLINDED · WRECKED +1500', 1300); }
+    const dd = Math.abs(c.d - G.egoD), ed = egoDims();
+    if (!c.crashed && gap < (4.8 + ed.L) / 2 && dd < 1.7 && G.jumpH < 0.6) { c.bumps++; G.v += 2.5; c.v = G.v - 4; c.s = S - (4.8 + ed.L) / 2 - 0.4; G.shake = 0.7; sfx.crash(); toast('BUMP ' + c.bumps + '/3', 600); }
+    c.hold = gap < 13 && dd < 2.2 ? c.hold + dt : Math.max(0, c.hold - dt * 0.6);
+    if (c.bumps >= 3 || c.hold > 4.5) busted();
+    c.far = gap > 150 ? c.far + dt : 0;
+    if (c.far > 3) { G.copEscapes++; toast('ESCAPED +800', 1200); sfx.chime(); G.cop = null; G.copCd = 25; }
+  } else c.s += c.v * dt;
+  if (!G.cop) { copMesh.visible = false; return; }
+  P(c.s, c.d, copMesh.position); copMesh.position.y += c.h; copMesh.rotation.set(Math.atan(slopeY(c.s)) + c.spin * 0.4, -Math.atan(slopeX(c.s)) + c.spin, -bank(c.s) + c.spin * 0.3);
+}
+function busted() { // placeholder; the GTA-style screen comes in rev 1.6
+  if (G.state !== 'play') return; G.state = 'crash'; G.busted = true; G.crashT = 0; G.shake = 0.6; sfx.crash(); $('bustedTxt').classList.remove('hidden');
+}
+// ---- steam cloud power-up (only during a chase): drop a huge vapour cloud behind you; the cop crashes into it ----
+const cloudTok = (() => { const g = new THREE.Group(), m = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x6fb6e8, emissiveIntensity: 0.55, roughness: 1 });
+  for (const [x, y, r] of [[0, 1.3, 0.7], [-0.65, 1.1, 0.5], [0.65, 1.1, 0.5], [0.3, 1.75, 0.45], [-0.3, 1.7, 0.42]]) { const s = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), m); s.position.set(x, y, 0); g.add(s); }
+  g.visible = false; scene.add(g); return g; })();
+function updateCloud(dt) {
+  const chase = G.cop && !G.cop.crashed && G.state === 'play';
+  if (chase && !G.cloudOn && S > G.cloudNext) { G.cloudOn = true; G.cdS = S + 260; G.cdD = laneC(Math.floor(Math.random() * Math.min(3, Math.floor(laneN(S + 260) + 0.02)))); }
+  if (!chase && G.cloudOn) G.cloudOn = false;
+  cloudTok.visible = !!G.cloudOn;
+  if (G.cloudOn) { P(G.cdS, G.cdD, cloudTok.position); cloudTok.position.y += Math.sin(performance.now() / 300) * 0.2; cloudTok.rotation.y += dt * 1.5;
+    if (Math.abs(G.cdS - S) < 2.8 && Math.abs(G.cdD - G.egoD) < 2 && G.jumpH < 2) { G.cloudOn = false; G.cloud = { s: S - 8, d: G.egoD, t: 5 }; G.clouds++; sfx.thrust(); toast('STEAM CLOUD!<small>The cop is driving straight into it</small>', 1300); }
+    else if (G.cdS < S - 20) { G.cloudOn = false; G.cloudNext = S + rnd(250, 400); } }
+  if (G.cloud) { G.cloud.t -= dt; for (let i = 0; i < 6; i++) emit(G.cloud.s + rnd(-5, 5), G.cloud.d + rnd(-3.5, 3.5), rnd(0.3, 3), 0, rnd(-2, 2), rnd(0, 1.5), rnd(2, 3.5), 0.75, rnd(5, 9), 1.4);
+    if (G.cloud.t <= 0 || G.cloud.s < S - 300) G.cloud = null; }
+}
 
 function updateTraffic(dt) {
   const EXF = G.state === 'play' ? exagF() : 1;
@@ -643,13 +716,13 @@ function crash(other) { G.crashCut = (G.crashCut || 0) + (other && other.lc && o
 }
 function gameOver() {
   G.state = 'over'; $('banner').classList.add('hidden'); const sc = G.score; if (sc > best) { best = sc; localStorage.setItem('fsdmm_best', String(best)); }
-  $('oscore').textContent = sc.toLocaleString(); $('odist').textContent = (G.dist / 1609.34).toFixed(1) + ' mi'; $('opass').textContent = G.passed; $('onear').textContent = G.near; $('otop').textContent = Math.round(G.topMph);
+  $('okick').textContent = G.busted ? 'Busted · Pulled Over' : 'Self-Driving Disengaged'; $('oscore').textContent = sc.toLocaleString(); $('odist').textContent = (G.dist / 1609.34).toFixed(1) + ' mi'; $('opass').textContent = G.passed; $('onear').textContent = G.near; $('otop').textContent = Math.round(G.topMph);
   $('obest').innerHTML = sc >= best && sc > 0 ? '<b style="color:#3e8ef7">New best!</b>' : `Best <b>${best.toLocaleString()}</b>`; $('best0').textContent = best.toLocaleString();
   $('over').classList.remove('hidden');
 }
 function start() {
   try { window.BurritoPlay && window.BurritoPlay('fsd'); } catch (e) {}
-  sfx.init(); reset(); G.state = 'play'; $('start').classList.add('hidden'); $('over').classList.add('hidden'); $('banner').classList.add('hidden'); $('hud').classList.remove('hidden'); $('flash').style.opacity = 0;
+  sfx.init(); $('bustedTxt').classList.add('hidden'); reset(); G.state = 'play'; $('start').classList.add('hidden'); $('over').classList.add('hidden'); $('banner').classList.add('hidden'); $('hud').classList.remove('hidden'); $('flash').style.opacity = 0;
   toast('Self-Driving engaged<small>Finger height sets speed · slide down to brake</small>', 1800); sfx.chime();
 }
 $('again').addEventListener('click', () => toPark());
@@ -658,7 +731,7 @@ $('mute').addEventListener('pointerdown', e => { e.stopPropagation(); sfx.setMut
 
 // ================= input =================
 const ptr = { id: null, x0: 0, y0: 0, d0: 0, m0: 70, t0: 0, moved: 0, lastTap: 0, lx: 0, ly: 0 };
-const MAX_MPH = 100, RS_MAX = 100, RS_FLOOR = 0, DEAD = 8; // Roadster limit+20..150 range deferred to rev 1.5
+const MAX_MPH = 100, RS_MAX = 150, RS_FLOOR = 20, DEAD = 8; // Roadster: limit+20 (no-touch) .. 150
 const spdLo = () => limitAt(S) + (roadster.visible ? RS_FLOOR : 0), spdHi = () => roadster.visible ? RS_MAX : MAX_MPH;
 const mphPerPx = () => (spdHi() - spdLo()) / clamp(innerHeight * 0.3, 150, 340); // a drag of ~30% screen height spans bottom (limit) -> top (max)
 const steerLo = () => tunnelAt(S) ? -1e9 : 1.05, steerHi = () => tunnelAt(S) ? 1e9 : maxD(S + 20);
@@ -758,7 +831,7 @@ function step(dt) {
   G.pitch = lerp(G.pitch || 0, G.jumpT >= 0 && !G.onRoof ? clamp(G.vy * 0.025, -0.35, 0.18) : 0, 1 - Math.exp(-dt * 8));
   G.cool -= dt;
   // roadster
-  if (G.rsT > 0 && playing) { G.rsT -= dt; if (G.rsT <= 0 && G.jumpT < 0) { G.boost = 0; G.rsT = 0; setRoadster(false); for (let i = 0; i < 20; i++) emit(S + rnd(-2, 2), G.egoD + rnd(-1, 1), 0.8, G.v * 0.8, rnd(-2, 2), 1, 0.7, 1, 3, 0.6); } else if (G.rsT <= 0) G.rsT = 0.01; }
+  if (G.rsT > 0 && playing) { if (!(G.cop && !G.cop.crashed)) G.rsT -= dt; /* timer paused during an active chase */ if (G.rsT <= 0 && G.jumpT < 0) { G.boost = 0; G.rsT = 0; setRoadster(false); for (let i = 0; i < 20; i++) emit(S + rnd(-2, 2), G.egoD + rnd(-1, 1), 0.8, G.v * 0.8, rnd(-2, 2), 1, 0.7, 1, 3, 0.6); } else if (G.rsT <= 0) G.rsT = 0.01; }
   // pickups
   if (playing && RS_ON && !G.pickupOn && S > G.nextPickup - 360) { const n = Math.floor(laneN(G.nextPickup) + 0.02); G.pkS = G.nextPickup; G.pkD = laneC(Math.floor(Math.random() * Math.min(n, 3))); G.pickupOn = true; }
   pickup.visible = G.pickupOn;
@@ -768,7 +841,7 @@ function step(dt) {
       for (let i = 0; i < 26; i++) emit(S + rnd(-2, 2), G.egoD + rnd(-1.2, 1.2), rnd(0.3, 1.2), G.v * 0.85, rnd(-3, 3), 1, 0.7, 0.8, 3.5, 0.7, 0xff6670); }
     if (G.pkS < S - 20) { G.pickupOn = false; G.nextPickup = S + rnd(500, 800); }
   }
-  updateTraffic(dt);
+  updateTraffic(dt); updateCop(dt); updateCloud(dt);
   // collisions / passing
   const ed = egoDims();
   for (const c of cars) {
@@ -788,7 +861,7 @@ function step(dt) {
       if (dd < 6) sfx.whoosh(clamp((c.d - G.egoD) / 5, -1, 1), c.type === 'semi' || c.type === 'box' ? 0.35 : 0.22);
     }
   }
-  G.score = Math.floor(G.dist / 10) + G.passPts + G.roofLands * 200 + G.near * 100 + G.jumps * 150 + G.wall * 50;
+  G.score = Math.floor(G.dist / 10) + G.passPts + G.copWrecks * 1500 + G.copEscapes * 800 + G.roofLands * 200 + G.near * 100 + G.jumps * 150 + G.wall * 50;
   if (G.state === 'crash') { G.crashT += dt; if (G.crashT > 1.5) gameOver(); }
   if (G.state === 'crash' || G.state === 'over') { G.spin += G.spinV * dt; G.spinV *= Math.exp(-dt * 1.6); }
   // ego transform
@@ -882,12 +955,20 @@ function preview(cv) {
 }
 function setPaused(p) { paused = p; $('pause').innerHTML = icon(p ? 'play' : 'pause'); }
 initSettings({ rev: REV, preview, speed: () => Math.round(G.v / MPH) || 'P', open: () => { if (G.state === 'play') setPaused(true); },
-  close: () => { if (G.state === 'play') setPaused(false); last = performance.now(); }, restart: () => { setPaused(false); toPark(); } });
+  close: () => { if (G.state === 'play') setPaused(false); last = performance.now(); }, restart: () => { setPaused(false); toPark(); }, unlocked: () => renderTiles() });
 onChange(applySettings);
 $('pause').addEventListener('pointerdown', e => { e.stopPropagation(); openSettings(true, 'controls'); });
 $('gear').addEventListener('click', () => openSettings(false));
-function renderTiles() { $('tiles').innerHTML = `<button class="ptile" id="tileSet">${icon('vehicle')}<b>Vehicle</b><small>Model &amp; paint</small></button><button class="ptile" id="tileDisp">${icon('display')}<b>Display</b><small>Light · Dark · Camera</small></button><button class="ptile" id="tileCtl">${icon('controls')}<b>Settings</b><small>Driving · Sound</small></button>`; }
-$('tiles').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; openSettings(false, b.id === 'tileSet' ? 'vehicle' : b.id === 'tileDisp' ? 'display' : 'controls'); });
+function renderTiles() {
+  RS_ON = Unlocks.has('roadster'); TUN_ON = Unlocks.has('tunnels');
+  $('tiles').innerHTML = [['roadster', 'Roadster', 'Power-up · cop chases', RS_ON], ['tunnels', 'Tunnels', 'Ride walls & ceiling', TUN_ON]].map(([id, n, d, on]) =>
+    `<button class="ptile ${on ? 'open' : 'locked'}" data-id="${id}">${icon(on ? (id === 'roadster' ? 'roadster' : 'driving') : 'lock')}<b>${n}</b><small>${on ? 'Unlocked' : 'Locked · tap to unlock'}</small></button>`).join('') +
+    `<button class="ptile" id="tileSet">${icon('controls')}<b>Settings</b><small>Vehicle · Display · Sound</small></button>`;
+}
+$('tiles').addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) return; if (b.id === 'tileSet') return openSettings(false);
+  if (b.classList.contains('locked')) { const ok = await Unlocks.request(b.dataset.id); if (ok) { renderTiles(); const nb = $('tiles').querySelector(`[data-id="${b.dataset.id}"]`); nb.classList.add('pop-unlock'); sfx.init(); sfx.chime(); } }
+});
 // gear shifter: slide up to D starts, down to R springs back
 { const th = $('thumb'), trk = $('shifter'); let dy0 = null, off = 0;
   const gearUI = gch => { for (const el of trk.querySelectorAll('.g')) el.classList.toggle('on', el.dataset.g === gch); };
@@ -899,7 +980,7 @@ $('tiles').addEventListener('click', e => { const b = e.target.closest('button')
   th.addEventListener('pointerup', end); th.addEventListener('pointercancel', end);
   window.__resetShifter = () => { th.style.transition = 'none'; th.style.transform = 'translate(-50%,-50%)'; gearUI('P'); };
 }
-function toPark() { reset(); G.state = 'attract'; G.v = 0; $('hud').classList.add('hidden'); $('over').classList.add('hidden'); $('banner').classList.add('hidden'); $('start').classList.remove('hidden'); window.__resetShifter(); }
+function toPark() { $('bustedTxt').classList.add('hidden'); reset(); G.state = 'attract'; G.v = 0; $('hud').classList.add('hidden'); $('over').classList.add('hidden'); $('banner').classList.add('hidden'); $('start').classList.remove('hidden'); window.__resetShifter(); }
 setInterval(() => { const d = new Date(); $('ptime').textContent = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase(); }, 5000);
 $('ptime').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase();
 applySettings();
@@ -913,4 +994,4 @@ if (qs.has('tune')) { // live tuning overlay
   document.body.appendChild(p); setInterval(() => { $('tv_x').textContent = `×${exagF().toFixed(2)} closing · gap ×${spaceF().toFixed(2)}`; }, 250);
 }
 // ---- test / debug hooks ----
-if (qs.has('test')) window.FSD = { G, clear: () => { for (const c of cars) freeVehicle(c.mesh); cars = []; }, gallery: (types, gap = 9) => { for (const c of cars) freeVehicle(c.mesh); cars = []; types.forEach((t, i) => { const T = TYPES[t], m = getVehicle(t), lane = i % 2 ? 2 : 0; const c = { type: t, mesh: m, s: S + 10 + Math.floor(i / 2) * gap + (i % 2) * 3, lane, d: laneC(lane), L: T.L, Wd: T.Wd, H: T.H, over: 0, v0: G.v, v: G.v, lc: null, lcTimer: 99, passed: false, exiting: false, braking: false, yaw: 0, jumped: false }; c.over = G.v / MPH - limitAt(S); cars.push(c); }); }, hud: () => { hudT = 0; hud(0.001); }, semiAhead: () => { for (const c of cars) freeVehicle(c.mesh); cars = []; const m = getVehicle('semi'), T = TYPES.semi; const rel = G.v - 32; const c = { type: 'semi', mesh: m, s: S + T.L / 2 + 2.4 + rel * 0.7, lane: Math.round(G.egoD / W - 0.5), d: G.egoD, L: T.L, Wd: T.Wd, H: T.H, over: 0, v0: 32, v: 32, lc: null, lcTimer: 99, passed: false, exiting: false, braking: false, yaw: 0, jumped: false }; c.over = 32 / MPH - limitAt(S); cars.push(c); return c; }, sim: (sec) => { const n = Math.round(sec * 60); for (let i = 0; i < n; i++) step(1 / 60); }, tunnel: () => FSD.warp(FSD.findSeg(3) + T0 + 40), drag: (x0, y0, x1, y1) => { const ev = (t, x, y) => canvas.dispatchEvent(new PointerEvent(t, { pointerId: 7, clientX: x, clientY: y, bubbles: true })); ev('pointerdown', x0, y0); for (let i = 1; i <= 10; i++) ev('pointermove', lerp(x0, x1, i / 10), lerp(y0, y1, i / 10)); ev('pointerup', x1, y1); }, start, toPark, openSettings, exagF, spaceF, fire, crash: () => crash(cars[0]), roadster: () => { G.rsT = 12; G.charges = 3; setRoadster(true); G.tgtMph = Math.max(G.tgtMph, spdLo()); renderCharges(); }, setAuto: b => { G.auto = b; }, warp: s => { S = s; for (const c of cars) freeVehicle(c.mesh); cars = []; }, get S() { return S; }, cars: () => cars, findSeg: (t, ov) => { for (let k = 1; k < 200; k++) if (segType(k) === t && (!ov || hasOverpass(k))) return k * SEG; return 0; }, noAdapt: () => { pr = 1; resize(); fpsAcc = -1e9; } };
+if (qs.has('test')) window.FSD = { G, clear: () => { for (const c of cars) freeVehicle(c.mesh); cars = []; }, gallery: (types, gap = 9) => { for (const c of cars) freeVehicle(c.mesh); cars = []; types.forEach((t, i) => { const T = TYPES[t], m = getVehicle(t), lane = i % 2 ? 2 : 0; const c = { type: t, mesh: m, s: S + 10 + Math.floor(i / 2) * gap + (i % 2) * 3, lane, d: laneC(lane), L: T.L, Wd: T.Wd, H: T.H, over: 0, v0: G.v, v: G.v, lc: null, lcTimer: 99, passed: false, exiting: false, braking: false, yaw: 0, jumped: false }; c.over = G.v / MPH - limitAt(S); cars.push(c); }); }, hud: () => { hudT = 0; hud(0.001); }, semiAhead: () => { for (const c of cars) freeVehicle(c.mesh); cars = []; const m = getVehicle('semi'), T = TYPES.semi; const rel = G.v - 32; const c = { type: 'semi', mesh: m, s: S + T.L / 2 + 2.4 + rel * 0.7, lane: Math.round(G.egoD / W - 0.5), d: G.egoD, L: T.L, Wd: T.Wd, H: T.H, over: 0, v0: 32, v: 32, lc: null, lcTimer: 99, passed: false, exiting: false, braking: false, yaw: 0, jumped: false }; c.over = 32 / MPH - limitAt(S); cars.push(c); return c; }, sim: (sec) => { const n = Math.round(sec * 60); for (let i = 0; i < n; i++) step(1 / 60); }, tunnel: () => FSD.warp(FSD.findSeg(3) + T0 + 40), drag: (x0, y0, x1, y1) => { const ev = (t, x, y) => canvas.dispatchEvent(new PointerEvent(t, { pointerId: 7, clientX: x, clientY: y, bubbles: true })); ev('pointerdown', x0, y0); for (let i = 1; i <= 10; i++) ev('pointermove', lerp(x0, x1, i / 10), lerp(y0, y1, i / 10)); ev('pointerup', x1, y1); }, start, toPark, openSettings, exagF, spaceF, copNow: () => { G.speedT = 99; G.copAt = 0; G.copCd = 0; }, cloudNow: () => { G.cloudNext = 0; }, unlocks: Unlocks, fire, crash: () => crash(cars[0]), roadster: () => { G.rsT = 12; G.charges = 3; setRoadster(true); G.tgtMph = Math.max(G.tgtMph, spdLo()); renderCharges(); }, setAuto: b => { G.auto = b; }, warp: s => { S = s; for (const c of cars) freeVehicle(c.mesh); cars = []; }, get S() { return S; }, cars: () => cars, findSeg: (t, ov) => { for (let k = 1; k < 200; k++) if (segType(k) === t && (!ov || hasOverpass(k))) return k * SEG; return 0; }, noAdapt: () => { pr = 1; resize(); fpsAcc = -1e9; } };

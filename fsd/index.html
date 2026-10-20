@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>FSD Mad Max</title>
 <link rel="preload" href="fonts/montserrat-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=2.4.0">
-<link rel="stylesheet" href="settings.css?v=2.4.0">
+<link rel="stylesheet" href="style.css?v=2.5.0">
+<link rel="stylesheet" href="settings.css?v=2.5.0">
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -47,6 +47,7 @@
   </div>
 </div>
 <div id="flash"></div>
+<div id="bustedTxt" class="hidden"><span>BUSTED</span></div>
 <div id="banner" class="hidden"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="none" stroke="#fff" stroke-width="2.2"/><path d="M3 11.5c3-1.5 15-1.5 18 0M12 13.5v8" stroke="#fff" stroke-width="2.2" fill="none"/></svg><span>Take Over Immediately</span></div>
 <div id="start" class="screen park">
   <div class="pbar"><span id="ptime">4:53 pm</span><span class="ptemp">72&deg;F</span><span class="sp"></span><span class="batt"><i></i>80%</span><span class="prange">248 mi</span></div>
@@ -59,7 +60,7 @@
 </div>
 <div id="over" class="screen hidden">
   <div class="card">
-    <div class="kicker red">Self-Driving Disengaged</div>
+    <div class="kicker red" id="okick">Self-Driving Disengaged</div>
     <h2 id="oscore">0</h2>
     <div class="lbl">Score</div>
     <div class="grid">
@@ -73,6 +74,6 @@
   </div>
 </div>
 <script src="../shared/stats.js?v=1"></script>
-<script type="module" src="game.js?v=2.4.0"></script>
+<script type="module" src="game.js?v=2.5.0"></script>
 </body>
 </html>
