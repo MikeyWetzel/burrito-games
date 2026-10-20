@@ -65,6 +65,22 @@ Mikey is unhappy with the car/truck models. They must look as close to identical
 - Compare harness: compare.html + cmp.py (ref crop | our render at matched angle); sheets in shots/v7/compare/. Refs: notateslaapp screenshots of the in-car visualization (refs not redistributed).
 - Next iteration ideas: per-model tail-light strips always visible (refs show red tails), bumper/rocker banding on SUV rear, hood/grille detail on box truck & semi, cruiser-style motorcycle, dedicated van ref.
 
-## 1.7.1 (hotfix)
-- Cheat mode (Settings > Driving, or `?cheat`, persisted): steer one lane-width onto either shoulder where traffic never goes; cops still chase; red CHEAT tag in HUD; cheat runs are never submitted to the leaderboard.
-- Cheat/`?test` shortcut: "Unlock Roadster & Tunnels now" (Settings > Driving / About), and tapping a locked tile unlocks it.
+## 1.7.1 (hotfix, shipped separately)
+- Cheat mode: Settings > Driving, or `?cheat` (persisted). Adds traffic-free shoulders, a CHEAT HUD tag, keeps cop chases, and never submits to the leaderboard. Unlock-all shortcut.
+
+## 1.8
+- Offline art loop with 4 rounds: `rounds.sh N` writes shots/v8/rounds/roundN/ (ref | ours sheets, critique.md, overview.png). Viewer: compare.html with `type=ego-m3|my|ms|mx|ct|rs` or a traffic type.
+- Ego hero is now a lofted Model 3. Pearl White is the default.
+  - Low pointed nose, continuous black glass roof, glossy clearcoat, dark 19in-look rims, slim headlamps.
+  - Model Y/S/X use the same loft with their own proportions. The Cybertruck builder moved to vehicles.js.
+- Roadster now appears only during the power-up. It was rebuilt as a low, wide, pointed loft with a targa.
+- Settings migration: an unknown or legacy saved model falls back to Model 3 Pearl White.
+- Traffic changes:
+  - New school bus (wide hood, black grille, window band, rub rails).
+  - Cruiser motorcycle.
+  - Police is now an SUV with a long low light bar.
+  - Van has a Sprinter-style nose.
+  - Box truck and semi have crisp z-aligned windscreens.
+  - Transit bus has a wrap windscreen.
+- Tail lights are always dim red and go bright when braking.
+- Remaining gaps: no door handles or panel lines on the ego cars, no falcon-wing X, no Cybertruck arch cladding, capsule moto rider.
