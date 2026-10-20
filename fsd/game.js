@@ -1,5 +1,6 @@
-import { SET, onChange, initSettings, openSettings, isLight, paintList, icon, saveSettings } from './settings.js?v=2.5.0';
-import { Unlocks } from './unlocks.js?v=2.5.0';
+import { SET, onChange, initSettings, openSettings, isLight, paintList, icon, saveSettings } from './settings.js?v=2.6.0';
+import { Unlocks } from './unlocks.js?v=2.6.0';
+import { showWasted, hideWasted, plateHTML, lastName, cleanName, fetchTop, submit, renderList } from './lb.js?v=2.6.0';
 import * as THREE from './vendor/three.module.min.js?v=r170';
 // ---- speed exaggeration + traffic spacing (tunable: Settings > Tuning, or ?tune overlay) ----
 const speedT = () => clamp((G.v / MPH - limitAt(S)) / (100 - limitAt(S)), 0, 1.6);
@@ -9,7 +10,7 @@ let RS_ON = Unlocks.has('roadster');
 const _x = 0, DENS = { low: 0.7, normal: 1, high: 1.3 }, CUT = { chill: 0.08, standard: 0.2, madmax: 0.4 }, QPR = { low: 1, med: 1.5, high: 2 };
 
 // ================= constants & helpers =================
-export const REV = '1.5'; // bump on every deploy
+export const REV = '1.6'; // bump on every deploy
 
 const W = 3.7;                 // lane width (m)
 const DMID = 1.5 * W;          // banking pivot
@@ -351,7 +352,7 @@ const TYPES = {
     lights(g, 2.2, 0.5, 0.8, false); return g; } },
 };
 // ---- Kenney Car Kit (CC0) bases, baked to models/traffic.json (per-face class: 0 body, 1 glass, 2 tire/dark, 3 hub, 4 tail, 5 head, 6 lower) and restyled ----
-const KM = await fetch('models/traffic.json?v=2.5.0').then(r => r.json()).catch(() => ({}));
+const KM = await fetch('models/traffic.json?v=2.6.0').then(r => r.json()).catch(() => ({}));
 const KMAP = { sedan: 'sedan', suv: 'suv', pickup: 'truck', van: 'van', box: 'delivery' }, kGeo = {};
 function kenneyGeo(name, T) {
   if (kGeo[name + T.L]) return kGeo[name + T.L];
@@ -599,7 +600,7 @@ function updateCop(dt) {
   P(c.s, c.d, copMesh.position); copMesh.position.y += c.h; copMesh.rotation.set(Math.atan(slopeY(c.s)) + c.spin * 0.4, -Math.atan(slopeX(c.s)) + c.spin, -bank(c.s) + c.spin * 0.3);
 }
 function busted() { // placeholder; the GTA-style screen comes in rev 1.6
-  if (G.state !== 'play') return; G.state = 'crash'; G.busted = true; G.crashT = 0; G.shake = 0.6; sfx.crash(); $('bustedTxt').classList.remove('hidden');
+  if (G.state !== 'play') return; G.state = 'crash'; G.busted = true; G.crashT = 0; G.shake = 0.6; sfx.crash(); startWasted('BUSTED');
 }
 // ---- steam cloud power-up (only during a chase): drop a huge vapour cloud behind you; the cop crashes into it ----
 const cloudTok = (() => { const g = new THREE.Group(), m = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x6fb6e8, emissiveIntensity: 0.55, roughness: 1 });
@@ -704,6 +705,11 @@ function fire() {
   for (let i = 0; i < 70; i++) { const under = i % 2; emit(S + (under ? rnd(-1.6, 1.6) : -2.2 - rnd(0, 0.6)), G.egoD + rnd(-0.9, 0.9), under ? 0.4 : 0.6, G.v * rnd(0.55, 0.85), rnd(-3, 3), under ? rnd(-2, 2) : rnd(0, 2), rnd(1.0, 1.9), rnd(0.8, 1.6), rnd(4, 8), 0.7); }
   return true;
 }
+function goalText() { const id = Unlocks.next(); if (!id) return ''; const p = Unlocks.progress(id); return `Pass ${p.need}${id === 'tunnels' ? ' more' : ''} cars to unlock ${id === 'roadster' ? 'Roadster' : 'Tunnels'} — ${p.n}/${p.need}`; }
+function onPass() { const got = Unlocks.addPass(); $('goal').textContent = goalText();
+  for (const id of got) { if (id === 'roadster') RS_ON = true; G.nextPickup = Math.min(G.nextPickup, S + 400);
+    banner2(id === 'roadster' ? 'ROADSTER UNLOCKED' : 'TUNNELS UNLOCKED', id === 'roadster' ? 'Grab the spinning badge on the road' : 'Tunnels appear from your next drive'); } }
+function banner2(t, sub) { const el = $('unlockBan'); el.innerHTML = `<b>${t}</b><small>${sub}</small>`; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); sfx.chime(); if (navigator.vibrate) navigator.vibrate([40, 30, 40]); clearTimeout(banner2.t); banner2.t = setTimeout(() => el.classList.remove('show'), 2600); }
 function renderCharges() { $('charges').innerHTML = [0, 1, 2].map(i => `<i class="${i < G.charges ? '' : 'off'}"></i>`).join(''); }
 function crash(other) { G.crashCut = (G.crashCut || 0) + (other && other.lc && other.lc.cut ? 1 : 0); G.crashN = (G.crashN || 0) + 1;
   if (G.state !== 'play') return;
@@ -711,19 +717,54 @@ function crash(other) { G.crashCut = (G.crashCut || 0) + (other && other.lc && o
   if (other) other.v += 6;
   for (let i = 0; i < 40; i++) emit(S + rnd(-1, 2), G.egoD + rnd(-1, 1), 0.6, G.v * rnd(0.3, 0.7), rnd(-4, 4), rnd(0, 3), rnd(0.8, 1.6), 0.6, rnd(3, 6), 0.6, 0xa9acb0);
   const f = $('flash'); f.style.transition = 'none'; f.style.opacity = 1; requestAnimationFrame(() => { f.style.transition = 'opacity 1.4s'; f.style.opacity = 0.35; });
-  $('banner').classList.remove('hidden');
+  startWasted('WASTED');
   if (navigator.vibrate) navigator.vibrate([80, 40, 120]);
 }
+// GTA-style death screen: slow-mo (frame), desaturate, zoom drift, vector WASTED/BUSTED
+function startWasted(word) { $('toast').classList.remove('show'); G.wWord = word; G.wShown = false; canvas.style.transition = 'filter 1.2s'; canvas.style.filter = 'grayscale(1) contrast(1.15) brightness(.78)'; }
+function clearWasted() { hideWasted(); canvas.style.transition = 'none'; canvas.style.filter = ''; G.wWord = null; }
 function gameOver() {
   G.state = 'over'; $('banner').classList.add('hidden'); const sc = G.score; if (sc > best) { best = sc; localStorage.setItem('fsdmm_best', String(best)); }
   $('okick').textContent = G.busted ? 'Busted · Pulled Over' : 'Self-Driving Disengaged'; $('oscore').textContent = sc.toLocaleString(); $('odist').textContent = (G.dist / 1609.34).toFixed(1) + ' mi'; $('opass').textContent = G.passed; $('onear').textContent = G.near; $('otop').textContent = Math.round(G.topMph);
   $('obest').innerHTML = sc >= best && sc > 0 ? '<b style="color:#3e8ef7">New best!</b>' : `Best <b>${best.toLocaleString()}</b>`; $('best0').textContent = best.toLocaleString();
-  $('over').classList.remove('hidden');
+  setupPlate(sc); $('over').classList.remove('hidden'); hideWasted();
 }
+let run = null;
+function setupPlate(sc) {
+  run = { s: sc, t: G.t, d: G.dist, sent: false };
+  $('omsg').textContent = ''; $('olb').classList.toggle('hidden', sc <= 0);
+  $('oplate').innerHTML = plateHTML(''); const tx = $('oplate').querySelector('.ptx');
+  tx.innerHTML = `<input id="pname" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="YOURNAME" aria-label="Plate name">`;
+  const inp = $('pname'); inp.value = lastName();
+  inp.addEventListener('input', () => { const c = inp.selectionStart; inp.value = cleanName(inp.value); inp.setSelectionRange(c, c); });
+  inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') sendPlate(); });
+  $('osub').disabled = false; $('osub').textContent = 'Submit plate';
+}
+async function sendPlate() {
+  const n = cleanName($('pname').value).trim(); if (!n) { $('omsg').textContent = 'Enter up to 8 letters or numbers'; return; }
+  if (!run || run.sent) return; run.sent = true; $('osub').disabled = true; $('omsg').textContent = 'Submitting…';
+  localStorage.setItem('fsdmm_plate', n);
+  try { const j = await submit(n, run); $('omsg').innerHTML = j.rank ? `You're <b>#${j.rank}</b> worldwide` : 'Not in the top 100 yet'; $('osub').textContent = 'Submitted ✓'; }
+  catch (e) { run.sent = false; $('osub').disabled = false; $('omsg').textContent = "Couldn't submit (" + e.message + ')'; }
+}
+$('osub').addEventListener('click', sendPlate);
+async function openLB() {
+  $('lbs').classList.remove('hidden'); $('lblist').innerHTML = '<p class="lbempty">Loading…</p>';
+  try { renderList($('lblist'), await fetchTop(), lastName(), -1); } catch (e) { $('lblist').innerHTML = '<p class="lbempty">Leaderboard unavailable</p>'; }
+}
+$('lbclose').addEventListener('click', () => $('lbs').classList.add('hidden'));
+// slide-to-Drive retry
+{ const tr = $('oretry'), kn = tr.querySelector('.sknob'); let x0 = null, max = 1;
+  const set = x => { kn.style.transform = `translateX(${x}px)`; tr.style.setProperty('--p', x / max); };
+  kn.addEventListener('pointerdown', e => { e.preventDefault(); x0 = e.clientX; max = tr.clientWidth - kn.offsetWidth - 8; kn.setPointerCapture(e.pointerId); kn.style.transition = 'none'; });
+  kn.addEventListener('pointermove', e => { if (x0 !== null) set(clamp(e.clientX - x0, 0, max)); });
+  const up = e => { if (x0 === null) return; const x = clamp(e.clientX - x0, 0, max); x0 = null; kn.style.transition = 'transform .25s';
+    if (x > max * 0.8) { set(max); setTimeout(() => { set(0); start(); }, 120); } else set(0); };
+  kn.addEventListener('pointerup', up); kn.addEventListener('pointercancel', up); }
 function start() {
   try { window.BurritoPlay && window.BurritoPlay('fsd'); } catch (e) {}
-  sfx.init(); $('bustedTxt').classList.add('hidden'); reset(); G.state = 'play'; $('start').classList.add('hidden'); $('over').classList.add('hidden'); $('banner').classList.add('hidden'); $('hud').classList.remove('hidden'); $('flash').style.opacity = 0;
-  toast('Self-Driving engaged<small>Finger height sets speed · slide down to brake</small>', 1800); sfx.chime();
+  sfx.init(); clearWasted(); reset(); G.state = 'play'; $('start').classList.add('hidden'); $('over').classList.add('hidden'); $('banner').classList.add('hidden'); $('hud').classList.remove('hidden'); $('flash').style.opacity = 0;
+  $('goal').textContent = goalText(); $('unlockBan').classList.remove('show'); toast('Self-Driving engaged<small>Finger height sets speed · slide down to brake</small>', 1800); sfx.chime();
 }
 $('again').addEventListener('click', () => toPark());
 const muteUI = () => { $('waves').style.display = sfx.muted ? 'none' : ''; $('xx').style.display = sfx.muted ? '' : 'none'; };
@@ -852,7 +893,7 @@ function step(dt) {
       if (G.jumpH > c.H - 0.25) { if (!c.jumped) { c.jumped = true; G.jumps++; } } else { crash(c); }
     }
     if (!c.passed && ds < -(c.L + ed.L) / 2) {
-      c.passed = true; if (!playing || c.v > G.v + 0.1) continue; G.passed++;
+      c.passed = true; if (!playing || c.v > G.v + 0.1) continue; G.passed++; onPass();
       const pts = Math.round(10 * Math.pow(G.v / MPH / lim, 2) * (roadster.visible ? RS_MULT : 1)); G.passPts += pts; popup('+' + pts, c);
       const gapLat = dd - (c.Wd + ed.Wd) / 2;
       if (c.jumped) { toast('JUMPED +150', 700); sfx.ping(); }
@@ -862,7 +903,7 @@ function step(dt) {
     }
   }
   G.score = Math.floor(G.dist / 10) + G.passPts + G.copWrecks * 1500 + G.copEscapes * 800 + G.roofLands * 200 + G.near * 100 + G.jumps * 150 + G.wall * 50;
-  if (G.state === 'crash') { G.crashT += dt; if (G.crashT > 1.5) gameOver(); }
+  if (G.state === 'crash') { G.crashT += dt; if (G.wWord && !G.wShown && G.crashT > 0.14) { G.wShown = true; showWasted(G.wWord); } if (G.crashT > 1.05) gameOver(); }
   if (G.state === 'crash' || G.state === 'over') { G.spin += G.spinV * dt; G.spinV *= Math.exp(-dt * 1.6); }
   // ego transform
   const tb = tunnelAt(S); if (tb) boreMap(G.egoD - DMID, G.bore); else { G.bore.x = G.egoD; G.bore.y = 0; G.bore.roll = 0; G.bore.floor = true; }
@@ -895,6 +936,8 @@ function step(dt) {
   let cr = lerp(10, 16, G.tf); if (G.state === 'play' && G.t < 2) cr = lerp(1.6, cr, G.t / 2); camPos.lerp(tp, 1 - Math.exp(-dt * cr)); camLook.lerp(tl, 1 - Math.exp(-dt * cr));
   G.shake *= Math.exp(-dt * 4); const sh = G.shake * 0.35;
   camera.position.set(camPos.x + rnd(-sh, sh), camPos.y + rnd(-sh, sh), camPos.z); camera.lookAt(camLook);
+  if (G.state === 'crash' || (G.state === 'over' && G.wWord)) { const z = sstep(0, 1.05, G.crashT); camera.fov = L.fov * (1 - 0.24 * z); camera.updateProjectionMatrix(); camera.rotateZ(0.05 * z); }
+  else if (camera.fov !== L.fov) { camera.fov = L.fov; camera.updateProjectionMatrix(); }
   sun.position.set(egoGroup.position.x - 12, egoGroup.position.y + 40, egoGroup.position.z + 10); sun.target.position.set(egoGroup.position.x, egoGroup.position.y, egoGroup.position.z - 14);
   camLight.position.copy(camera.position); camLight.intensity = 140 * G.tf;
   sfx.hum(G.v / MPH, G.state === 'play');
@@ -914,7 +957,7 @@ function hud(dt) {
 }
 function frame(now) {
   const rdt = (now - last) / 1000; last = now; const dt = Math.min(0.05, rdt);
-  step(dt); hud(dt); renderer.render(scene, camera);
+  step(G.state === 'crash' ? dt * 0.3 : dt); hud(dt); renderer.render(scene, camera);
   fpsAcc += rdt; fpsN++; fpsShow += rdt; fpsCnt++; if (fpsShow > 0.5) { if (SET.fps) $('fps').textContent = Math.round(fpsCnt / fpsShow) + ' fps'; fpsShow = 0; fpsCnt = 0; }
   if (fpsAcc > 2.5) { const avg = fpsAcc / fpsN; if (avg > 0.022 && pr > 1) { pr = Math.max(1, pr - 0.25); resize(); } else if (avg > 0.03 && renderer.shadowMap.enabled && pr <= 1) { renderer.shadowMap.enabled = false; scene.traverse(m => { if (m.material) m.material.needsUpdate = true; }); } fpsAcc = 0; fpsN = 0; }
   requestAnimationFrame(frame);
@@ -962,12 +1005,13 @@ $('gear').addEventListener('click', () => openSettings(false));
 function renderTiles() {
   RS_ON = Unlocks.has('roadster'); TUN_ON = Unlocks.has('tunnels');
   $('tiles').innerHTML = [['roadster', 'Roadster', 'Power-up · cop chases', RS_ON], ['tunnels', 'Tunnels', 'Ride walls & ceiling', TUN_ON]].map(([id, n, d, on]) =>
-    `<button class="ptile ${on ? 'open' : 'locked'}" data-id="${id}">${icon(on ? (id === 'roadster' ? 'roadster' : 'driving') : 'lock')}<b>${n}</b><small>${on ? 'Unlocked' : 'Locked · tap to unlock'}</small></button>`).join('') +
+    `<button class="ptile ${on ? 'open' : 'locked'}" data-id="${id}">${icon(on ? (id === 'roadster' ? 'roadster' : 'driving') : 'lock')}<b>${n}</b><small>${on ? 'Unlocked' : (p => `Pass ${p.need}${id === 'tunnels' ? ' more' : ''} cars · ${p.n}/${p.need}`)(Unlocks.progress(id))}</small></button>`).join('') +
+    `<button class="ptile open" id="tileLB"><svg class="ic" viewBox="0 0 24 24"><path d="M7 4h10v4a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8M9.5 17h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><b>Leaders</b><small>Global plates</small></button>` +
     `<button class="ptile" id="tileSet">${icon('controls')}<b>Settings</b><small>Vehicle · Display · Sound</small></button>`;
 }
 $('tiles').addEventListener('click', async e => {
-  const b = e.target.closest('button'); if (!b) return; if (b.id === 'tileSet') return openSettings(false);
-  if (b.classList.contains('locked')) { const ok = await Unlocks.request(b.dataset.id); if (ok) { renderTiles(); const nb = $('tiles').querySelector(`[data-id="${b.dataset.id}"]`); nb.classList.add('pop-unlock'); sfx.init(); sfx.chime(); } }
+  const b = e.target.closest('button'); if (!b) return; if (b.id === 'tileSet') return openSettings(false); if (b.id === 'tileLB') return openLB();
+  if (b.classList.contains('locked')) { if (!qs.has('test')) { b.classList.remove('nudge'); void b.offsetWidth; b.classList.add('nudge'); return; } const ok = await Unlocks.request(b.dataset.id); /* dev shortcut; future rewarded-ad hook */ if (ok) { renderTiles(); const nb = $('tiles').querySelector(`[data-id="${b.dataset.id}"]`); nb.classList.add('pop-unlock'); sfx.init(); sfx.chime(); } }
 });
 // gear shifter: slide up to D starts, down to R springs back
 { const th = $('thumb'), trk = $('shifter'); let dy0 = null, off = 0;
@@ -980,7 +1024,7 @@ $('tiles').addEventListener('click', async e => {
   th.addEventListener('pointerup', end); th.addEventListener('pointercancel', end);
   window.__resetShifter = () => { th.style.transition = 'none'; th.style.transform = 'translate(-50%,-50%)'; gearUI('P'); };
 }
-function toPark() { $('bustedTxt').classList.add('hidden'); reset(); G.state = 'attract'; G.v = 0; $('hud').classList.add('hidden'); $('over').classList.add('hidden'); $('banner').classList.add('hidden'); $('start').classList.remove('hidden'); window.__resetShifter(); }
+function toPark() { clearWasted(); reset(); G.state = 'attract'; G.v = 0; $('hud').classList.add('hidden'); $('over').classList.add('hidden'); $('banner').classList.add('hidden'); $('start').classList.remove('hidden'); window.__resetShifter(); }
 setInterval(() => { const d = new Date(); $('ptime').textContent = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase(); }, 5000);
 $('ptime').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase();
 applySettings();
@@ -994,4 +1038,4 @@ if (qs.has('tune')) { // live tuning overlay
   document.body.appendChild(p); setInterval(() => { $('tv_x').textContent = `×${exagF().toFixed(2)} closing · gap ×${spaceF().toFixed(2)}`; }, 250);
 }
 // ---- test / debug hooks ----
-if (qs.has('test')) window.FSD = { G, clear: () => { for (const c of cars) freeVehicle(c.mesh); cars = []; }, gallery: (types, gap = 9) => { for (const c of cars) freeVehicle(c.mesh); cars = []; types.forEach((t, i) => { const T = TYPES[t], m = getVehicle(t), lane = i % 2 ? 2 : 0; const c = { type: t, mesh: m, s: S + 10 + Math.floor(i / 2) * gap + (i % 2) * 3, lane, d: laneC(lane), L: T.L, Wd: T.Wd, H: T.H, over: 0, v0: G.v, v: G.v, lc: null, lcTimer: 99, passed: false, exiting: false, braking: false, yaw: 0, jumped: false }; c.over = G.v / MPH - limitAt(S); cars.push(c); }); }, hud: () => { hudT = 0; hud(0.001); }, semiAhead: () => { for (const c of cars) freeVehicle(c.mesh); cars = []; const m = getVehicle('semi'), T = TYPES.semi; const rel = G.v - 32; const c = { type: 'semi', mesh: m, s: S + T.L / 2 + 2.4 + rel * 0.7, lane: Math.round(G.egoD / W - 0.5), d: G.egoD, L: T.L, Wd: T.Wd, H: T.H, over: 0, v0: 32, v: 32, lc: null, lcTimer: 99, passed: false, exiting: false, braking: false, yaw: 0, jumped: false }; c.over = 32 / MPH - limitAt(S); cars.push(c); return c; }, sim: (sec) => { const n = Math.round(sec * 60); for (let i = 0; i < n; i++) step(1 / 60); }, tunnel: () => FSD.warp(FSD.findSeg(3) + T0 + 40), drag: (x0, y0, x1, y1) => { const ev = (t, x, y) => canvas.dispatchEvent(new PointerEvent(t, { pointerId: 7, clientX: x, clientY: y, bubbles: true })); ev('pointerdown', x0, y0); for (let i = 1; i <= 10; i++) ev('pointermove', lerp(x0, x1, i / 10), lerp(y0, y1, i / 10)); ev('pointerup', x1, y1); }, start, toPark, openSettings, exagF, spaceF, copNow: () => { G.speedT = 99; G.copAt = 0; G.copCd = 0; }, cloudNow: () => { G.cloudNext = 0; }, unlocks: Unlocks, fire, crash: () => crash(cars[0]), roadster: () => { G.rsT = 12; G.charges = 3; setRoadster(true); G.tgtMph = Math.max(G.tgtMph, spdLo()); renderCharges(); }, setAuto: b => { G.auto = b; }, warp: s => { S = s; for (const c of cars) freeVehicle(c.mesh); cars = []; }, get S() { return S; }, cars: () => cars, findSeg: (t, ov) => { for (let k = 1; k < 200; k++) if (segType(k) === t && (!ov || hasOverpass(k))) return k * SEG; return 0; }, noAdapt: () => { pr = 1; resize(); fpsAcc = -1e9; } };
+if (qs.has('test')) window.FSD = { G, clear: () => { for (const c of cars) freeVehicle(c.mesh); cars = []; }, gallery: (types, gap = 9) => { for (const c of cars) freeVehicle(c.mesh); cars = []; types.forEach((t, i) => { const T = TYPES[t], m = getVehicle(t), lane = i % 2 ? 2 : 0; const c = { type: t, mesh: m, s: S + 10 + Math.floor(i / 2) * gap + (i % 2) * 3, lane, d: laneC(lane), L: T.L, Wd: T.Wd, H: T.H, over: 0, v0: G.v, v: G.v, lc: null, lcTimer: 99, passed: false, exiting: false, braking: false, yaw: 0, jumped: false }; c.over = G.v / MPH - limitAt(S); cars.push(c); }); }, hud: () => { hudT = 0; hud(0.001); }, semiAhead: () => { for (const c of cars) freeVehicle(c.mesh); cars = []; const m = getVehicle('semi'), T = TYPES.semi; const rel = G.v - 32; const c = { type: 'semi', mesh: m, s: S + T.L / 2 + 2.4 + rel * 0.7, lane: Math.round(G.egoD / W - 0.5), d: G.egoD, L: T.L, Wd: T.Wd, H: T.H, over: 0, v0: 32, v: 32, lc: null, lcTimer: 99, passed: false, exiting: false, braking: false, yaw: 0, jumped: false }; c.over = 32 / MPH - limitAt(S); cars.push(c); return c; }, sim: (sec) => { const n = Math.round(sec * 60); for (let i = 0; i < n; i++) step(1 / 60); }, tunnel: () => FSD.warp(FSD.findSeg(3) + T0 + 40), drag: (x0, y0, x1, y1) => { const ev = (t, x, y) => canvas.dispatchEvent(new PointerEvent(t, { pointerId: 7, clientX: x, clientY: y, bubbles: true })); ev('pointerdown', x0, y0); for (let i = 1; i <= 10; i++) ev('pointermove', lerp(x0, x1, i / 10), lerp(y0, y1, i / 10)); ev('pointerup', x1, y1); }, start, toPark, openSettings, exagF, spaceF, openLB, run: () => run, copNow: () => { G.speedT = 99; G.copAt = 0; G.copCd = 0; }, cloudNow: () => { G.cloudNext = 0; }, unlocks: Unlocks, fire, crash: () => crash(cars[0]), roadster: () => { G.rsT = 12; G.charges = 3; setRoadster(true); G.tgtMph = Math.max(G.tgtMph, spdLo()); renderCharges(); }, setAuto: b => { G.auto = b; }, warp: s => { S = s; for (const c of cars) freeVehicle(c.mesh); cars = []; }, get S() { return S; }, cars: () => cars, findSeg: (t, ov) => { for (let k = 1; k < 200; k++) if (segType(k) === t && (!ov || hasOverpass(k))) return k * SEG; return 0; }, noAdapt: () => { pr = 1; resize(); fpsAcc = -1e9; } };

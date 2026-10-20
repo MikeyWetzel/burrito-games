@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>FSD Mad Max</title>
 <link rel="preload" href="fonts/montserrat-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=2.5.0">
-<link rel="stylesheet" href="settings.css?v=2.5.0">
+<link rel="stylesheet" href="style.css?v=2.6.0">
+<link rel="stylesheet" href="settings.css?v=2.6.0">
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -36,7 +36,7 @@
     <div class="rsin"><b id="rst">12</b><span>ROADSTER</span></div>
     <div id="charges"></div>
   </div>
-  <div id="toast"></div><button id="pause" aria-label="pause"><svg class="ic" viewBox="0 0 24 24"><path d="M8.5 5.5v13M15.5 5.5v13"/></svg></button><div id="fps" class="hidden"></div>
+  <div id="toast"></div><div id="goal"></div><div id="unlockBan"></div><button id="pause" aria-label="pause"><svg class="ic" viewBox="0 0 24 24"><path d="M8.5 5.5v13M15.5 5.5v13"/></svg></button><div id="fps" class="hidden"></div>
   <div id="lines"></div>
   <div id="gauge"><div class="gt"><div id="gfill"></div></div><b id="gval">80</b><span id="glab">Standard</span></div>
   <div id="bar">
@@ -47,7 +47,7 @@
   </div>
 </div>
 <div id="flash"></div>
-<div id="bustedTxt" class="hidden"><span>BUSTED</span></div>
+<div id="wasted"></div>
 <div id="banner" class="hidden"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="none" stroke="#fff" stroke-width="2.2"/><path d="M3 11.5c3-1.5 15-1.5 18 0M12 13.5v8" stroke="#fff" stroke-width="2.2" fill="none"/></svg><span>Take Over Immediately</span></div>
 <div id="start" class="screen park">
   <div class="pbar"><span id="ptime">4:53 pm</span><span class="ptemp">72&deg;F</span><span class="sp"></span><span class="batt"><i></i>80%</span><span class="prange">248 mi</span></div>
@@ -70,10 +70,13 @@
       <div><b id="otop">0</b><span>Top MPH</span></div>
     </div>
     <div class="best" id="obest">Best 0</div>
-    <button id="again" class="pill">Back to Park</button>
+    <div id="olb"><div id="oplate"></div><button id="osub" class="pill sm">Submit plate</button><div id="omsg"></div></div>
+    <div id="oretry" class="slide"><span>Slide to Drive</span><div class="sknob"><svg viewBox="0 0 24 24"><path d="M10 7l5 5-5 5M5 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+    <button id="again" class="lnk">Back to Park</button>
   </div>
 </div>
+<div id="lbs" class="screen hidden"><div class="card lbcard"><div class="kicker">Global Leaderboard</div><div id="lblist"></div><button id="lbclose" class="pill">Close</button></div></div>
 <script src="../shared/stats.js?v=1"></script>
-<script type="module" src="game.js?v=2.5.0"></script>
+<script type="module" src="game.js?v=2.6.0"></script>
 </body>
 </html>
