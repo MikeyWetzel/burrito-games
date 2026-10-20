@@ -36,3 +36,9 @@ Roadster and Tunnels are unlockable from the Park screen. `Unlocks.request(id)` 
 
 ### Rev 1.7
 Traffic vehicles are our own procedural geometry (vehicles.js), modelled by eye after public screenshots of the Tesla in-car visualization; no Tesla or third-party model files are used or extracted.
+
+### 3D models (1.9+)
+The vehicle models are ours. Blender Python scripts in `blender/` generate them; there are no third-party meshes.
+- The generated `.glb` files are binary, so they are not in git. They live on the server at `burrito/fsd/models/v9/` and can be rebuilt with `blender -b -P blender/build.py -- models/v9 <names>` (Blender 4.2 LTS).
+- The game loads them with three.js GLTFLoader + DRACOLoader (MIT, vendored in `vendor/loaders`).
+- The Draco decoder (`vendor/draco/draco_decoder.wasm` + `draco_wasm_wrapper.js`, Apache-2.0, from three.js r170 examples) is also binary and server-only.

@@ -84,3 +84,11 @@ Mikey is unhappy with the car/truck models. They must look as close to identical
   - Transit bus has a wrap windscreen.
 - Tail lights are always dim red and go bright when braking.
 - Remaining gaps: no door handles or panel lines on the ego cars, no falcon-wing X, no Cybertruck arch cladding, capsule moto rider.
+
+## 1.9
+- New model pipeline: Blender 4.2, run headless from Python (`blender/carlib.py`, `blender/models.py`, `blender/build.py`). The models are subdivision-surface cages built from side and plan profiles, with feature-line creases, boolean wheel arches and smooth shading. They are exported as Draco-compressed glTF to `models/v9/*.glb`, about 0.8 MB for 14 models.
+  - Rebuild: `blender -b -P blender/build.py -- models/v9 m3 my ms mx rs sedan suv cop pickup van box semi bus school`
+- `models.js` uses the vendored GLTFLoader and DRACOLoader (`vendor/loaders`, `vendor/draco`). The game preloads every model with top-level await and swaps in shared materials by name: paint, glass, trim, tail, lamp, drl, tyre, rim, spoke.
+- Viewer: `compare.html?type=glb-<name>`. `rounds9.sh N` writes the side-by-side sheets to `shots/v9/rounds/roundN/`, alongside the critiques.
+- The Model 3 hero, Y/S/X and Roadster (ego) and all traffic except the moto now come from these models. The Cybertruck and moto are still procedural.
+- Next: a Blender moto and Cybertruck, panel lines and handles on the ego, Highland C-shaped tail lamps, a flatter M3 roof arc.
