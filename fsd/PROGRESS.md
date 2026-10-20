@@ -53,8 +53,14 @@
 - Global leaderboard: /burrito/stats/leaderboard.php (repo copy in server/). Data in ~/www/apps.bobacat.cafe/private/burrito-stats/fsd-leaderboard.json, flock, top 100, name/field validation, sanity caps (score <= 400/s + 3000, <= 2,000,000; distance <= 150 mph), rate limit 5/10 min per client via hourly-rotating salted HMAC + 200/h global; no IPs stored. Leaders tile on Park shows mini plates.
 - Progress unlocks replace tap-to-unlock: cumulative passes (localStorage fsdmm_passes). Roadster at 20, Tunnels at 40. Goal text on Park tiles + in-game pill; ROADSTER/TUNNELS UNLOCKED banner mid-run (tunnels apply from next drive). Unlocks.request kept as the future rewarded-ad hook; tap-to-unlock only behind ?test. Reset in About resets unlocks and progress.
 
-## TOP PRIORITY for 1.7: Tesla-identical vehicle models
+## Rev 1.7 (shipped 2026-10-19): Tesla-style vehicle models (was: TOP PRIORITY for 1.7)
 Mikey is unhappy with the car/truck models. They must look as close to identical to the Tesla app visualization as possible, using own-built geometry (no extracted assets).
 - Per vehicle type (sedan, SUV, pickup, van, box truck, semi, bus, moto...), build custom meshes from scratch, closely tracing the refs (greentheonly asset sheet, notateslaapp screenshots).
 - Match proportions, smooth rounded silhouette, roof/glass shape, wheel arches; matte off-white shading with a soft gradient. No toy-like Kenney look.
 - Iterate with per-model side-by-side renders (ref vs ours) at a matching camera angle until close.
+
+### 1.7 notes
+- vehicles.js builds every traffic type from scratch: superellipse cross-sections lofted along monotone-cubic profiles (roofline, beltline, plan width, tumblehome, ground clearance with carved wheel arches). Glass, light window surround, pillars and lower trim are vertex colours on exact vertex rows (fixed v breakpoints + z breakpoints) so edges stay crisp; soft vertical gradient; matte material. Rounded lathe tyres + recessed hubs.
+- Types: sedan, suv, pickup, van, box, semi, bus, moto (with rider), cop (sedan body + light bar). Geometry is built once per type and shared; models/traffic.json (Kenney, 771 KB) is no longer loaded -> vehicles.js is ~20 KB.
+- Compare harness: compare.html + cmp.py (ref crop | our render at matched angle); sheets in shots/v7/compare/. Refs: notateslaapp screenshots of the in-car visualization (refs not redistributed).
+- Next iteration ideas: per-model tail-light strips always visible (refs show red tails), bumper/rocker banding on SUV rear, hood/grille detail on box truck & semi, cruiser-style motorcycle, dedicated van ref.
