@@ -1,4 +1,4 @@
-import { Unlocks } from './unlocks.js?v=2.8.0';
+import { Unlocks } from './unlocks.js?v=2.9.0';
 // Tesla-Controls-style settings screen. Persisted in localStorage; game listens via onChange.
 const KEY = 'fsdmm_settings';
 export const DEF = { theme: 'auto', density: 'normal', difficulty: 'standard', camera: 'near', quality: 'high', fps: false, sound: true, volume: 0.8, rsTime: 12, rsCharges: 3, cheat: false, model: 'm3', paint: 'pearl', exK: 1.6, exP: 1.7, space: 0.8 };
