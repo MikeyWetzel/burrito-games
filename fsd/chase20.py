@@ -15,10 +15,15 @@ async def run(name,w,h):
     await pg.wait_for_timeout(2500); await E('FSDchase()')
     log=[]
     for i in range(24):
-      await pg.wait_for_timeout(500)
+      await pg.wait_for_timeout(250)
       st=await E("(()=>{const c=FSD.G.cop;return c?{arr:c.arr,t:+c.t.toFixed(1),cr:c.crashed>0,v:Math.round(c.v*2.237),ev:Math.round(FSD.G.v*2.237),ind:document.querySelector('#copInd b').textContent,vis:!document.getElementById('copInd').classList.contains('hidden'),state:FSD.G.state}:{none:1,state:FSD.G.state,esc:FSD.G.copEscapes,wr:FSD.G.copWrecks}})()")
       log.append(st)
+      if st.get('ind') and not st['cr'] and int(st['ind'].split()[0])<=9 and not os.path.exists(OUT+f'final-{name}.png'): await pg.screenshot(path=OUT+f'final-{name}.png'); print('GOT',name,st['ind'])
       if i in (2,4,6,8,12): await pg.screenshot(path=OUT+f'{name}-chase-{i*0.5:.1f}s.png')
     print(name,json.dumps(log),errs); await b.close()
-async def main(): await asyncio.gather(run('land',1280,720),run('port',390,844))
+async def main():
+  for k in range(6):
+    todo=[r for r in (('land',1280,720),('port',390,844)) if not os.path.exists(OUT+f'final-{r[0]}.png')]
+    if not todo: break
+    await asyncio.gather(*[run(*r) for r in todo])
 asyncio.run(main())
