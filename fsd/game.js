@@ -1,6 +1,7 @@
-import { SET, onChange, initSettings, openSettings, isLight, paintList, icon, saveSettings } from './settings.js?v=2.6.0';
-import { Unlocks } from './unlocks.js?v=2.6.0';
-import { showWasted, hideWasted, plateHTML, lastName, cleanName, fetchTop, submit, renderList } from './lb.js?v=2.6.0';
+import { SET, onChange, initSettings, openSettings, isLight, paintList, icon, saveSettings } from './settings.js?v=2.7.0';
+import { Unlocks } from './unlocks.js?v=2.7.0';
+import { buildVehicle } from './vehicles.js?v=2.7.0';
+import { showWasted, hideWasted, plateHTML, lastName, cleanName, fetchTop, submit, renderList } from './lb.js?v=2.7.0';
 import * as THREE from './vendor/three.module.min.js?v=r170';
 // ---- speed exaggeration + traffic spacing (tunable: Settings > Tuning, or ?tune overlay) ----
 const speedT = () => clamp((G.v / MPH - limitAt(S)) / (100 - limitAt(S)), 0, 1.6);
@@ -10,7 +11,7 @@ let RS_ON = Unlocks.has('roadster');
 const _x = 0, DENS = { low: 0.7, normal: 1, high: 1.3 }, CUT = { chill: 0.08, standard: 0.2, madmax: 0.4 }, QPR = { low: 1, med: 1.5, high: 2 };
 
 // ================= constants & helpers =================
-export const REV = '1.6'; // bump on every deploy
+export const REV = '1.7'; // bump on every deploy
 
 const W = 3.7;                 // lane width (m)
 const DMID = 1.5 * W;          // banking pivot
@@ -293,7 +294,7 @@ function wheels(g, zs, half, r, w = 0.26, hub = hubMat) {
     const h = new THREE.Mesh(geo[1], hub); h.rotation.y = sd * Math.PI / 2; h.position.set(sd * (half + 0.003), r, z); g.add(h);
   }
 }
-const GREY = 0xdedddb, GLASS = 0x5d6066; // in-car FSD look (NATA refs): smooth off-white matte, glass a few shades darker
+const GREY = 0xc9cacc, GLASS = 0x5d6066; // in-car FSD look (NATA refs): smooth off-white matte, glass a few shades darker
 const lowerMat = new THREE.MeshStandardMaterial({ color: 0xa9aaad, roughness: 0.9 }), kTire = new THREE.MeshStandardMaterial({ color: 0x3a3b3f, roughness: 0.9 }), kHub = new THREE.MeshStandardMaterial({ color: 0xe6e5e2, roughness: 0.8 });
 const blinkMat = new THREE.MeshBasicMaterial({ color: 0xffa51f });
 const brakeMat = new THREE.MeshBasicMaterial({ color: 0xff2a2a });
@@ -351,35 +352,18 @@ const TYPES = {
     for (const z of [-0.75, 0.75]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.14, 18), tireMat); w.rotation.z = Math.PI / 2; w.position.set(0, 0.32, z); g.add(w); }
     lights(g, 2.2, 0.5, 0.8, false); return g; } },
 };
-// ---- Kenney Car Kit (CC0) bases, baked to models/traffic.json (per-face class: 0 body, 1 glass, 2 tire/dark, 3 hub, 4 tail, 5 head, 6 lower) and restyled ----
-const KM = await fetch('models/traffic.json?v=2.6.0').then(r => r.json()).catch(() => ({}));
-const KMAP = { sedan: 'sedan', suv: 'suv', pickup: 'truck', van: 'van', box: 'delivery' }, kGeo = {};
-function kenneyGeo(name, T) {
-  if (kGeo[name + T.L]) return kGeo[name + T.L];
-  const M = KM[name], n = M.c.length, sx = T.Wd / (M.max[0] - M.min[0]), sy = T.H / M.max[1], sz = T.L / (M.max[2] - M.min[2]), cz = (M.max[2] + M.min[2]) / 2;
-  const groups = [[], [], [], [], [], [], []];
-  for (let f = 0; f < n; f++) groups[M.c[f]].push(f);
-  const out = groups.map(fs => { if (!fs.length) return null; const pos = new Float32Array(fs.length * 9), nor = new Float32Array(fs.length * 9);
-    fs.forEach((f, j) => { for (let k = 0; k < 9; k++) { const q = f * 9 + k, ax = k % 3; pos[j * 9 + k] = M.p[q] / 1000 * (ax === 0 ? sx : ax === 1 ? sy : sz) - (ax === 2 ? cz * sz : 0); nor[j * 9 + k] = M.n[q] / 100 / (ax === 0 ? sx : ax === 1 ? sy : sz); } });
-    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); geo.normalizeNormals(); if (KFLIP) geo.rotateY(Math.PI); return geo; });
-  return (kGeo[name + T.L] = out);
-}
-const KFLIP = true; // Kenney models face +z; our vehicles face -z
-function kenney(type, bm, gm) {
-  const T = TYPES[type], g = new THREE.Group(), geos = kenneyGeo(KMAP[type], T), mats = [bm, gm, kTire, kHub, tailMat0, headMat0, lowerMat];
-  geos.forEach((geo, i) => { if (!geo) return; const m = new THREE.Mesh(geo, mats[i]); m.castShadow = i !== 3; m.receiveShadow = true; g.add(m); });
-  lights(g, T.L, T.Wd, T.H * 0.45, type !== 'box'); return g;
-}
+// ---- rev 1.7: traffic bodies are built from scratch in vehicles.js (smooth lofted shells, vertex-coloured glass) ----
+const LIGHT_Y = { sedan: [0.86, true], suv: [1.02, true], pickup: [1.08, true], van: [1.05, true], box: [0.9, false], semi: [1.3, false], bus: [1.1, false], moto: [0.8, false] };
 const tailMat0 = new THREE.MeshStandardMaterial({ color: 0x8a3a3a, roughness: 0.6 }), headMat0 = new THREE.MeshStandardMaterial({ color: 0xf4f4f0, roughness: 0.5 });
 const TYPE_W = [['sedan', 0.29], ['suv', 0.23], ['pickup', 0.13], ['van', 0.08], ['box', 0.09], ['semi', 0.11], ['bus', 0.03], ['moto', 0.04]];
 const pools = {}; for (const k in TYPES) pools[k] = [];
 function getVehicle(type) {
   const p = pools[type]; if (p.length) { const m = p.pop(); m.visible = true; return m; }
   const T = TYPES[type];
-  const bm = new THREE.MeshStandardMaterial({ color: GREY, roughness: 0.78, envMapIntensity: 0.55 });
+  const bm = new THREE.MeshStandardMaterial({ color: GREY, roughness: 0.8, envMapIntensity: 0.55, vertexColors: true });
   const tm = new THREE.MeshStandardMaterial({ color: 0xc4c7cb, roughness: 0.85, envMapIntensity: 0.5 });
   const gm = new THREE.MeshStandardMaterial({ color: GLASS, roughness: 0.5, envMapIntensity: 0.6 });
-  const g = KM[KMAP[type]] ? kenney(type, bm, gm) : T.build(bm, gm, tm);  g.userData.bodyMat = bm; g.userData.type = type; g.rotation.order = 'YXZ'; scene.add(g); return g;
+  const g = buildVehicle(type, bm) || T.build(bm, gm, tm); if (LIGHT_Y[type]) lights(g, T.L, T.Wd, LIGHT_Y[type][0], LIGHT_Y[type][1]);  g.userData.bodyMat = bm; g.userData.type = type; g.rotation.order = 'YXZ'; scene.add(g); return g;
 }
 function freeVehicle(m) { m.visible = false; pools[m.userData.type].push(m); }
 
@@ -557,8 +541,8 @@ const laneFree = (lane, s, me, gap) => !cars.some(o => o !== me && (o.lane === l
 
 
 // ================= cop chase =================
-const copMesh = (() => { const bm = new THREE.MeshStandardMaterial({ color: GREY, roughness: 0.85 }), gm = new THREE.MeshStandardMaterial({ color: GLASS, roughness: 0.6 });
-  const g = TYPES.sedan.build(bm, gm); const red = new THREE.MeshBasicMaterial({ color: 0xff2a2a }), wht = new THREE.MeshBasicMaterial({ color: 0xffffff }), off = new THREE.MeshStandardMaterial({ color: 0x55585e });
+const copMesh = (() => { const bm = new THREE.MeshStandardMaterial({ color: GREY, roughness: 0.8, vertexColors: true });
+  const g = buildVehicle('cop', bm); const red = new THREE.MeshBasicMaterial({ color: 0xff2a2a }), wht = new THREE.MeshBasicMaterial({ color: 0xffffff }), off = new THREE.MeshStandardMaterial({ color: 0x55585e });
   const base = new THREE.Mesh(smallBox, off); base.scale.set(1.2, 0.08, 0.32); base.position.set(0, 1.47, 0.25); g.add(base);
   const L = new THREE.Mesh(smallBox, red), R = new THREE.Mesh(smallBox, wht); L.scale.set(0.55, 0.13, 0.3); R.scale.set(0.55, 0.13, 0.3); L.position.set(-0.3, 1.56, 0.25); R.position.set(0.3, 1.56, 0.25); g.add(L, R);
   const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d'); const gr = x.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, '#fff'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
