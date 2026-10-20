@@ -1,7 +1,7 @@
-import { Unlocks } from './unlocks.js?v=2.7.0';
+import { Unlocks } from './unlocks.js?v=2.7.1';
 // Tesla-Controls-style settings screen. Persisted in localStorage; game listens via onChange.
 const KEY = 'fsdmm_settings';
-export const DEF = { theme: 'auto', density: 'normal', difficulty: 'standard', camera: 'near', quality: 'high', fps: false, sound: true, volume: 0.8, rsTime: 12, rsCharges: 3, model: 'm3', paint: 'pearl', exK: 1.6, exP: 1.7, space: 0.8 };
+export const DEF = { theme: 'auto', density: 'normal', difficulty: 'standard', camera: 'near', quality: 'high', fps: false, sound: true, volume: 0.8, rsTime: 12, rsCharges: 3, cheat: false, model: 'm3', paint: 'pearl', exK: 1.6, exP: 1.7, space: 0.8 };
 export const SET = Object.assign({}, DEF, (() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } })());
 export const MODELS = [['m3', 'Model 3'], ['my', 'Model Y'], ['ms', 'Model S'], ['mx', 'Model X'], ['ct', 'Cybertruck']];
 // approximations of Tesla's current paint names
@@ -11,6 +11,7 @@ export const PAINTS = {
   cherry: ['Midnight Cherry Red', '#5c1521'],
 };
 export const CT_PAINTS = { stainless: ['Stainless Steel', '#b9bcbf'], satblack: ['Satin Black Wrap', '#232427'], satwhite: ['Satin White Wrap', '#dcdcd8'] };
+if (new URLSearchParams(location.search).has('cheat')) { SET.cheat = true; try { localStorage.setItem(KEY, JSON.stringify(SET)); } catch (e) {} } // ?cheat turns cheat mode on (persisted)
 export const paintList = m => m === 'ct' ? CT_PAINTS : PAINTS;
 let cb = () => {};
 export const onChange = f => { cb = f; };
@@ -57,7 +58,9 @@ function body() {
       <div class="slrow">${slider('volume', 0, 1, 0.05)}<button class="blue" data-act="done">Done</button></div>`;
     case 'driving': return row('Traffic Density', seg('density', [['low', 'Low'], ['normal', 'Normal'], ['high', 'High']])) +
       row('Difficulty', seg('difficulty', [['chill', 'Chill'], ['standard', 'Standard'], ['madmax', 'Mad Max']])) +
-      `<p class="note">Difficulty sets how often traffic changes lanes and cuts in (always signalled, never unavoidable).</p>`;
+      `<p class="note">Difficulty sets how often traffic changes lanes and cuts in (always signalled, never unavoidable).</p>` +
+      row('Cheat Mode', seg('cheat', yes)) + `<p class="note">Cheat mode: drive on the shoulders past the outer lanes, where traffic never goes. Cops still chase you. Cheat runs are not submitted to the leaderboard.</p>` +
+      (SET.cheat ? `<button class="tile wide" data-act="unlockAll">${icon('lock')}<span>Unlock Roadster &amp; Tunnels now</span></button>` : '');
     case 'vehicle': { const pl = paintList(SET.model); return `<div class="prev"><canvas id="carPrev"></canvas><div class="pname">${MODELS.find(m => m[0] === SET.model)[1]}<small>${(pl[SET.paint] || Object.values(pl)[0])[0]}</small></div></div>` +
       seg('model', MODELS) + `<div class="paints">${Object.entries(pl).map(([k, [n, c]]) => `<button class="sw ${SET.paint === k ? 'on' : ''}" data-paint="${k}" title="${n}" style="--c:${c}"></button>`).join('')}</div>`; }
     case 'display': return row('Appearance', seg('theme', [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']])) + row('Camera', seg('camera', [['near', 'Near'], ['far', 'Far']])) +
@@ -68,7 +71,7 @@ function body() {
       row(`Traffic spacing at speed · ${SET.space.toFixed(2)}`, `<div class="slrow">${slider('space', 0, 2, 0.05)}</div>`) +
       `<p class="note">Closing speed × (1 + strength × t^power), t = 0 at the limit … 1 at 100 mph. Spacing widens gaps and thins traffic as t rises. Live: also on screen with ?tune.</p><button class="tile wide" data-act="tuneReset">${icon('gauge')}<span>Reset tuning</span></button>`;
     case 'about': return `<div class="about"><b>FSD Mad Max</b><span>Rev ${hooks.rev}</span><p>Fan-made game, not affiliated with Tesla. Font: Montserrat (SIL OFL). Traffic car bases: Kenney Car Kit (CC0), restyled. Everything else drawn procedurally.</p>
-      <button class="tile wide" data-act="resetUnlocks">${icon('lock')}<span>Reset unlocks &amp; progress</span></button></div>`;
+      <button class="tile wide" data-act="resetUnlocks">${icon('lock')}<span>Reset unlocks &amp; progress</span></button>${SET.cheat ? `<button class="tile wide" data-act="unlockAll">${icon('lock')}<span>Unlock Roadster &amp; Tunnels now</span></button>` : ''}</div>`;
   }
 }
 function render() {
@@ -94,6 +97,7 @@ export function openSettings(paused, t) {
       const a = b.dataset.act;
       if (a === 'sound') { SET.sound = !SET.sound; save(); render(); }
       else if (a === 'fps') { SET.fps = !SET.fps; save(); render(); }
+      else if (a === 'unlockAll') { Unlocks.grantAll(); hooks.unlocked && hooks.unlocked(); render(); }
       else if (a === 'resetUnlocks') { Unlocks.reset(); hooks.unlocked && hooks.unlocked(); render(); }
       else if (a === 'tuneReset') { SET.exK = DEF.exK; SET.exP = DEF.exP; SET.space = DEF.space; save(); render(); }
       else if (a === 'done' || a === 'resume') closeSettings();

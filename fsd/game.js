@@ -1,7 +1,7 @@
-import { SET, onChange, initSettings, openSettings, isLight, paintList, icon, saveSettings } from './settings.js?v=2.7.0';
-import { Unlocks } from './unlocks.js?v=2.7.0';
-import { buildVehicle } from './vehicles.js?v=2.7.0';
-import { showWasted, hideWasted, plateHTML, lastName, cleanName, fetchTop, submit, renderList } from './lb.js?v=2.7.0';
+import { SET, onChange, initSettings, openSettings, isLight, paintList, icon, saveSettings } from './settings.js?v=2.7.1';
+import { Unlocks } from './unlocks.js?v=2.7.1';
+import { buildVehicle } from './vehicles.js?v=2.7.1';
+import { showWasted, hideWasted, plateHTML, lastName, cleanName, fetchTop, submit, renderList } from './lb.js?v=2.7.1';
 import * as THREE from './vendor/three.module.min.js?v=r170';
 // ---- speed exaggeration + traffic spacing (tunable: Settings > Tuning, or ?tune overlay) ----
 const speedT = () => clamp((G.v / MPH - limitAt(S)) / (100 - limitAt(S)), 0, 1.6);
@@ -11,7 +11,7 @@ let RS_ON = Unlocks.has('roadster');
 const _x = 0, DENS = { low: 0.7, normal: 1, high: 1.3 }, CUT = { chill: 0.08, standard: 0.2, madmax: 0.4 }, QPR = { low: 1, med: 1.5, high: 2 };
 
 // ================= constants & helpers =================
-export const REV = '1.7'; // bump on every deploy
+export const REV = '1.7.1'; // bump on every deploy
 
 const W = 3.7;                 // lane width (m)
 const DMID = 1.5 * W;          // banking pivot
@@ -715,8 +715,8 @@ function gameOver() {
 }
 let run = null;
 function setupPlate(sc) {
-  run = { s: sc, t: G.t, d: G.dist, sent: false };
-  $('omsg').textContent = ''; $('olb').classList.toggle('hidden', sc <= 0);
+  run = { s: sc, t: G.t, d: G.dist, sent: false, cheat: !!(SET.cheat || G.cheated) };
+  $('omsg').textContent = ''; $('olb').classList.toggle('hidden', sc <= 0 || run.cheat);
   $('oplate').innerHTML = plateHTML(''); const tx = $('oplate').querySelector('.ptx');
   tx.innerHTML = `<input id="pname" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="YOURNAME" aria-label="Plate name">`;
   const inp = $('pname'); inp.value = lastName();
@@ -726,6 +726,7 @@ function setupPlate(sc) {
 }
 async function sendPlate() {
   const n = cleanName($('pname').value).trim(); if (!n) { $('omsg').textContent = 'Enter up to 8 letters or numbers'; return; }
+  if (SET.cheat || (run && run.cheat)) { $('omsg').textContent = 'Cheat mode run: not submitted'; return; }
   if (!run || run.sent) return; run.sent = true; $('osub').disabled = true; $('omsg').textContent = 'Submitting…';
   localStorage.setItem('fsdmm_plate', n);
   try { const j = await submit(n, run); $('omsg').innerHTML = j.rank ? `You're <b>#${j.rank}</b> worldwide` : 'Not in the top 100 yet'; $('osub').textContent = 'Submitted ✓'; }
@@ -747,7 +748,7 @@ $('lbclose').addEventListener('click', () => $('lbs').classList.add('hidden'));
   kn.addEventListener('pointerup', up); kn.addEventListener('pointercancel', up); }
 function start() {
   try { window.BurritoPlay && window.BurritoPlay('fsd'); } catch (e) {}
-  sfx.init(); clearWasted(); reset(); G.state = 'play'; $('start').classList.add('hidden'); $('over').classList.add('hidden'); $('banner').classList.add('hidden'); $('hud').classList.remove('hidden'); $('flash').style.opacity = 0;
+  sfx.init(); clearWasted(); reset(); G.cheated = !!SET.cheat; G.state = 'play'; $('start').classList.add('hidden'); $('over').classList.add('hidden'); $('banner').classList.add('hidden'); $('hud').classList.remove('hidden'); $('flash').style.opacity = 0;
   $('goal').textContent = goalText(); $('unlockBan').classList.remove('show'); toast('Self-Driving engaged<small>Finger height sets speed · slide down to brake</small>', 1800); sfx.chime();
 }
 $('again').addEventListener('click', () => toPark());
@@ -759,8 +760,9 @@ const ptr = { id: null, x0: 0, y0: 0, d0: 0, m0: 70, t0: 0, moved: 0, lastTap: 0
 const MAX_MPH = 100, RS_MAX = 150, RS_FLOOR = 20, DEAD = 8; // Roadster: limit+20 (no-touch) .. 150
 const spdLo = () => limitAt(S) + (roadster.visible ? RS_FLOOR : 0), spdHi = () => roadster.visible ? RS_MAX : MAX_MPH;
 const mphPerPx = () => (spdHi() - spdLo()) / clamp(innerHeight * 0.3, 150, 340); // a drag of ~30% screen height spans bottom (limit) -> top (max)
-const steerLo = () => tunnelAt(S) ? -1e9 : 1.05, steerHi = () => tunnelAt(S) ? 1e9 : maxD(S + 20);
+const steerLo = () => tunnelAt(S) ? -1e9 : 1.05 - SHO(), steerHi = () => tunnelAt(S) ? 1e9 : maxD(S + 20) + SHO();
 const pxPerLane = () => clamp(innerWidth * 0.21, 70, 170);
+const SHO = () => SET.cheat ? W : 0; // cheat mode: one lane-width of shoulder each side, traffic-free
 const maxD = s => W * laneN(s) - 1.05;
 canvas.addEventListener('pointerdown', e => {
   sfx.ctx && sfx.ctx.resume(); ptr.id = e.pointerId; ptr.x0 = e.clientX; ptr.y0 = e.clientY; ptr.d0 = G.tgtD; ptr.m0 = Math.max(G.tgtMph, G.v / MPH); ptr.t0 = performance.now(); ptr.moved = 0;
@@ -828,15 +830,16 @@ function step(dt) {
   S += G.v * dt; if (playing) G.dist += G.v * dt;
   OX = roadX(S); OY = roadY(S);
   // steering
+  if (playing && SET.cheat) G.cheated = true; $('cheatTag').classList.toggle('hidden', !SET.cheat);
   if (playing && !G.auto) { const k = (keys.ArrowLeft || keys.a ? -1 : 0) + (keys.ArrowRight || keys.d ? 1 : 0); if (k) G.tgtD += k * 11 * dt; }
   const inTun = tunnelAt(S), md = inTun ? 1e9 : maxD(S);
   if (inTun) { // wrap around the bore, keep egoD/tgtD together
     const q = G.egoD - DMID; if (q > LOOP / 2) { G.egoD -= LOOP; G.tgtD -= LOOP; } else if (q < -LOOP / 2) { G.egoD += LOOP; G.tgtD += LOOP; }
     const k = Math.floor(S / SEG), u = S - k * SEG; if (u > T1 - 90) { const tq = G.tgtD - DMID; if (Math.abs(tq) > HALF - 1.2) G.tgtD = DMID + Math.sign(tq) * (HALF - 1.6); }
-  } else G.tgtD = clamp(G.tgtD, 1.05, Math.max(1.05, maxD(S + 20)));
+  } else G.tgtD = clamp(G.tgtD, 1.05 - SHO(), Math.max(1.05, maxD(S + 20)) + SHO());
   if (!inTun && Math.abs(G.egoD - DMID) > HALF) G.egoD = DMID + clamp(G.egoD - DMID, -HALF, HALF);
   if (G.state === 'play' || G.state === 'attract') {
-    const prev = G.egoD; G.egoD += (G.tgtD - G.egoD) * (1 - Math.exp(-dt * 9)); if (G.egoD > md) G.egoD = lerp(G.egoD, md, 1 - Math.exp(-dt * 10));
+    const prev = G.egoD; G.egoD += (G.tgtD - G.egoD) * (1 - Math.exp(-dt * 9)); if (G.egoD > md + SHO()) G.egoD = lerp(G.egoD, md + SHO(), 1 - Math.exp(-dt * 10));
     G.egoVd = (G.egoD - prev) / Math.max(dt, 1e-4);
   } else G.egoVd *= 0.9;
   // jump
@@ -995,7 +998,7 @@ function renderTiles() {
 }
 $('tiles').addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return; if (b.id === 'tileSet') return openSettings(false); if (b.id === 'tileLB') return openLB();
-  if (b.classList.contains('locked')) { if (!qs.has('test')) { b.classList.remove('nudge'); void b.offsetWidth; b.classList.add('nudge'); return; } const ok = await Unlocks.request(b.dataset.id); /* dev shortcut; future rewarded-ad hook */ if (ok) { renderTiles(); const nb = $('tiles').querySelector(`[data-id="${b.dataset.id}"]`); nb.classList.add('pop-unlock'); sfx.init(); sfx.chime(); } }
+  if (b.classList.contains('locked')) { if (!qs.has('test') && !SET.cheat) { b.classList.remove('nudge'); void b.offsetWidth; b.classList.add('nudge'); return; } const ok = await Unlocks.request(b.dataset.id); /* dev shortcut; future rewarded-ad hook */ if (ok) { renderTiles(); const nb = $('tiles').querySelector(`[data-id="${b.dataset.id}"]`); nb.classList.add('pop-unlock'); sfx.init(); sfx.chime(); } }
 });
 // gear shifter: slide up to D starts, down to R springs back
 { const th = $('thumb'), trk = $('shifter'); let dy0 = null, off = 0;

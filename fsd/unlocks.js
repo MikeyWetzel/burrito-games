@@ -22,5 +22,6 @@ export const Unlocks = {
     // Currently only reachable as a dev shortcut behind ?test.
     grant(id); return true;
   },
+  grantAll() { for (const id of ['roadster', 'tunnels']) grant(id); }, // dev/cheat shortcut
   reset() { localStorage.removeItem(KEY); localStorage.removeItem(PKEY); },
 };
