@@ -46,3 +46,15 @@
 - Steam Cloud power-up only spawns during a chase; cops that hit it crash. Roadster timer paused during an active chase.
 - Unlocks (unlocks.js): Roadster + Tunnels tiles on Park are locked; tap unlocks (DEV), `Unlocks.request(id)` is the hook for rewarded ads. Reset in Settings > About.
 - Fixes: darker traffic glass (rebaked models), light-mode HUD/nav arrow contrast. QA in shots/v5/.
+
+## Rev 1.6 (shipped 2026-10-19)
+- WASTED (crash) / BUSTED (cop): 0.3x slow-mo, canvas desaturate, FOV zoom + roll drift, red/blue text from Anton vector outlines (words.js; no font embedded), sized to fit phone width; then score card.
+- Score card: CA-style plate name entry (8 chars A-Z0-9 space, last name remembered), Submit plate, Slide-to-Drive retry, Back to Park.
+- Global leaderboard: /burrito/stats/leaderboard.php (repo copy in server/). Data in ~/www/apps.bobacat.cafe/private/burrito-stats/fsd-leaderboard.json, flock, top 100, name/field validation, sanity caps (score <= 400/s + 3000, <= 2,000,000; distance <= 150 mph), rate limit 5/10 min per client via hourly-rotating salted HMAC + 200/h global; no IPs stored. Leaders tile on Park shows mini plates.
+- Progress unlocks replace tap-to-unlock: cumulative passes (localStorage fsdmm_passes). Roadster at 20, Tunnels at 40. Goal text on Park tiles + in-game pill; ROADSTER/TUNNELS UNLOCKED banner mid-run (tunnels apply from next drive). Unlocks.request kept as the future rewarded-ad hook; tap-to-unlock only behind ?test. Reset in About resets unlocks and progress.
+
+## TOP PRIORITY for 1.7: Tesla-identical vehicle models
+Mikey is unhappy with the car/truck models. They must look as close to identical to the Tesla app visualization as possible, using own-built geometry (no extracted assets).
+- Per vehicle type (sedan, SUV, pickup, van, box truck, semi, bus, moto...), build custom meshes from scratch, closely tracing the refs (greentheonly asset sheet, notateslaapp screenshots).
+- Match proportions, smooth rounded silhouette, roof/glass shape, wheel arches; matte off-white shading with a soft gradient. No toy-like Kenney look.
+- Iterate with per-model side-by-side renders (ref vs ours) at a matching camera angle until close.

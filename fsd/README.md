@@ -27,3 +27,9 @@ Fan-made game, not affiliated with Tesla. All models and UI are drawn procedural
 
 ### Unlocks (rev 1.5)
 Roadster and Tunnels are unlockable from the Park screen. `Unlocks.request(id)` in `unlocks.js` resolves immediately in dev; wire a rewarded ad there later. Reset via Settings > About.
+
+### Rev 1.6 credits
+- Oswald (plate characters) — SIL Open Font License 1.1, self-hosted subset in fonts/ (fonts/OFL-Oswald.txt).
+- Yellowtail ("California" script) — Apache License 2.0, self-hosted subset (fonts/LICENSE-Yellowtail.txt).
+- WASTED/BUSTED artwork: vector outlines generated from Anton glyphs — SIL OFL 1.1 (fonts/OFL-Anton.txt). Pricedown is not used.
+- License-plate drawing is our own; not an official California design.
