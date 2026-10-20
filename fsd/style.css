@@ -97,3 +97,5 @@ html.land .how{flex-direction:row;gap:calc(var(--u)*5)}html.land .how b{min-widt
 #lines::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(180deg,transparent 0 30px,#ffffff14 30px 70px,transparent 70px 140px);animation:streak .4s linear infinite}
 @keyframes streak{from{background-position:0 0}to{background-position:0 140px}}
 #speed{transition:color .2s}
+
+#cheatTag{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 62px);transform:translateX(-50%);font:700 11px/1 system-ui,sans-serif;letter-spacing:.12em;color:#fff;background:#d4232f;padding:4px 8px;border-radius:6px;z-index:5;pointer-events:none}

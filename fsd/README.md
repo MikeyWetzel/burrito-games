@@ -36,3 +36,6 @@ Roadster and Tunnels are unlockable from the Park screen. `Unlocks.request(id)` 
 
 ### Rev 1.7
 Traffic vehicles are our own procedural geometry (vehicles.js), modelled by eye after public screenshots of the Tesla in-car visualization; no Tesla or third-party model files are used or extracted.
+
+### Cheat mode (1.7.1)
+Settings > Driving > Cheat Mode, or open with `?cheat`. Adds traffic-free shoulders for testing long runs and cop chases; cheat runs are excluded from the leaderboard.

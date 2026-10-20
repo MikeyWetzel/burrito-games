@@ -64,3 +64,7 @@ Mikey is unhappy with the car/truck models. They must look as close to identical
 - Types: sedan, suv, pickup, van, box, semi, bus, moto (with rider), cop (sedan body + light bar). Geometry is built once per type and shared; models/traffic.json (Kenney, 771 KB) is no longer loaded -> vehicles.js is ~20 KB.
 - Compare harness: compare.html + cmp.py (ref crop | our render at matched angle); sheets in shots/v7/compare/. Refs: notateslaapp screenshots of the in-car visualization (refs not redistributed).
 - Next iteration ideas: per-model tail-light strips always visible (refs show red tails), bumper/rocker banding on SUV rear, hood/grille detail on box truck & semi, cruiser-style motorcycle, dedicated van ref.
+
+## 1.7.1 (hotfix)
+- Cheat mode (Settings > Driving, or `?cheat`, persisted): steer one lane-width onto either shoulder where traffic never goes; cops still chase; red CHEAT tag in HUD; cheat runs are never submitted to the leaderboard.
+- Cheat/`?test` shortcut: "Unlock Roadster & Tunnels now" (Settings > Driving / About), and tapping a locked tile unlocks it.
