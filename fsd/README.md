@@ -20,7 +20,7 @@ Debug URL flags: `?auto` (AI drives) and `?god` (no collisions). The small grey 
 Fan-made game, not affiliated with Tesla. All models and UI are drawn procedurally.
 
 ## Rev 1.4 credits / licenses
-- Traffic car bases (sedan, SUV, pickup, van, box truck): Kenney (no longer used since 1.7) "Car Kit" — CC0 1.0 (www.kenney.nl). Baked to `models/traffic.json`, re-proportioned and restyled to the FSD matte look.
+- Vehicles (ego cars, Roadster, all traffic incl. school bus, moto, police): 100% our own procedural geometry in vehicles.js (no third-party models). Reference photos (Wikimedia Commons, Tesla FSD visualization screenshots) were used only for side-by-side comparison during development and are not shipped.
 - UI font: Montserrat — SIL Open Font License 1.1, self-hosted `fonts/montserrat-latin.woff2`.
 - Everything else (ego Model 3/Y/S/X/Cybertruck, semi, bus, moto, Roadster, UI icons) is drawn procedurally; no Tesla assets or logos.
 - Tuning: Settings › Tuning, or `?tune` for a live on-screen panel (speed exaggeration strength/curve, traffic spacing).
@@ -36,6 +36,3 @@ Roadster and Tunnels are unlockable from the Park screen. `Unlocks.request(id)` 
 
 ### Rev 1.7
 Traffic vehicles are our own procedural geometry (vehicles.js), modelled by eye after public screenshots of the Tesla in-car visualization; no Tesla or third-party model files are used or extracted.
-
-### Cheat mode (1.7.1)
-Settings > Driving > Cheat Mode, or open with `?cheat`. Adds traffic-free shoulders for testing long runs and cop chases; cheat runs are excluded from the leaderboard.
