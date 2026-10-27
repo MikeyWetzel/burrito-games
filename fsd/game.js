@@ -3,6 +3,7 @@ import { Unlocks } from './unlocks.js?v=2.9.0';
 import { preloadAll, cloneModel } from './models.js?v=2.9.0';
 import { buildVehicle, buildEgoCar, M3, EGO_SPEC, RS_SPEC, buildCT } from './vehicles.js?v=2.9.0';
 import { showWasted, hideWasted, plateHTML, lastName, cleanName, fetchTop, submit, renderList } from './lb.js?v=2.9.0';
+import { diversifyOver, followSpeed, blockingPacks, shearPack } from './traffic.js?v=3.2.0';
 import * as THREE from './vendor/three.module.min.js?v=r170';
 // ---- speed exaggeration + traffic spacing (tunable: Settings > Tuning, or ?tune overlay) ----
 const speedT = () => clamp((G.v / MPH - limitAt(S)) / (100 - limitAt(S)), 0, 1.6);
@@ -12,7 +13,7 @@ let RS_ON = Unlocks.has('roadster');
 const _x = 0, DENS = { low: 0.7, normal: 1, high: 1.3 }, CUT = { chill: 0.08, standard: 0.2, madmax: 0.4 }, QPR = { low: 1, med: 1.5, high: 2 };
 
 // ================= constants & helpers =================
-export const REV = '2.1';
+export const REV = '2.2';
 await preloadAll(['m3', 'my', 'ms', 'mx', 'rs', 'sedan', 'suv', 'cop', 'pickup', 'van', 'box', 'semi', 'bus', 'school']); // Blender-built .glb (models/v9) // bump on every deploy
 
 const W = 3.7;                 // lane width (m)
@@ -358,7 +359,7 @@ const TYPES = {
 // ---- rev 1.7: traffic bodies are built from scratch in vehicles.js (smooth lofted shells, vertex-coloured glass) ----
 const LIGHT_Y = { sedan: [0.86, true], suv: [1.02, true], pickup: [1.08, true], van: [1.05, true], box: [0.9, false], semi: [1.3, false], bus: [1.1, false], school: [1.0, false], moto: [0.8, false] };
 const tailMat0 = new THREE.MeshStandardMaterial({ color: 0x8a3a3a, roughness: 0.6 }), headMat0 = new THREE.MeshStandardMaterial({ color: 0xf4f4f0, roughness: 0.5 });
-const TYPE_W = [['sedan', 0.29], ['suv', 0.23], ['pickup', 0.13], ['van', 0.08], ['box', 0.09], ['semi', 0.11], ['bus', 0.02], ['school', 0.02], ['moto', 0.04]];
+const TYPE_W = [['sedan', 0.24], ['suv', 0.20], ['pickup', 0.12], ['van', 0.08], ['box', 0.08], ['semi', 0.10], ['bus', 0.02], ['school', 0.02], ['moto', 0.14]];
 const pools = {}; for (const k in TYPES) pools[k] = [];
 // traffic look (mono-grey FSD visualization): per-instance body paint, shared dark glass / trim / wheels
 const TM = { glass: new THREE.MeshStandardMaterial({ color: 0x4d5055, roughness: 0.3, envMapIntensity: 0.8 }), trim: new THREE.MeshStandardMaterial({ color: 0x5e6166, roughness: 0.8 }),
@@ -371,9 +372,29 @@ function getVehicle(type) {
   const tm = new THREE.MeshStandardMaterial({ color: 0xc4c7cb, roughness: 0.85, envMapIntensity: 0.5 });
   const gm = new THREE.MeshStandardMaterial({ color: GLASS, roughness: 0.5, envMapIntensity: 0.6 });
   const gl = cloneModel(type, trafficMats(bm)); if (gl) bm.vertexColors = false;
-  const g = gl || buildVehicle(type, bm) || T.build(bm, gm, tm); if (LIGHT_Y[type]) lights(g, T.L, T.Wd, LIGHT_Y[type][0], LIGHT_Y[type][1]);  g.userData.bodyMat = bm; g.userData.type = type; g.rotation.order = 'YXZ'; scene.add(g); return g;
+  const g = gl || buildVehicle(type, bm) || T.build(bm, gm, tm); if (LIGHT_Y[type]) lights(g, T.L, T.Wd, LIGHT_Y[type][0], LIGHT_Y[type][1]);
+  if (type === 'moto') dressMoto(g);
+  g.userData.bodyMat = bm; g.userData.type = type; g.rotation.order = 'YXZ'; scene.add(g); return g;
 }
-function freeVehicle(m) { m.visible = false; pools[m.userData.type].push(m); }
+function dressMoto(g) {
+  const jacket = new THREE.MeshStandardMaterial({ color: 0xd24a22, roughness: 0.62, emissive: 0x4a1408, emissiveIntensity: 0.35 });
+  const pants = new THREE.MeshStandardMaterial({ color: 0x23262b, roughness: 0.8 });
+  const helmet = new THREE.MeshStandardMaterial({ color: 0xf4f5f7, roughness: 0.25, metalness: 0.18 });
+  const visor = new THREE.MeshStandardMaterial({ color: 0x101216, roughness: 0.08, metalness: 0.5 });
+  g.traverse(m => {
+    if (!m.isMesh || !m.userData.rider) return;
+    if (m.geometry && m.geometry.type === 'SphereGeometry') {
+      m.material = helmet;
+      const v = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), visor);
+      v.scale.set(1.15, 0.65, 0.5); v.position.set(0, -0.01, -0.1); v.userData.visor = 1; m.add(v);
+    } else m.material = m.position.y < 1.1 ? pants : jacket;
+  });
+}
+function freeVehicle(m) {
+  m.visible = false;
+  m.traverse(o => { if (o.userData && o.userData.rider) o.visible = true; });
+  pools[m.userData.type].push(m);
+}
 
 // ---- ego: Model 3/Y-style (white, black glass roof) + Roadster ----
 const egoGroup = new THREE.Group(); egoGroup.rotation.order = 'YXZ'; scene.add(egoGroup);
@@ -505,6 +526,7 @@ const sfx = {
     else { const s = this.sr; this.sr = null; s.g.gain.setTargetAtTime(0, t, 0.15); s.o.stop(t + 1); s.lfo.stop(t + 1); } },
   ping() { this.tone('sine', 1500, 1700, 0.12, 0.1); },
   chime() { this.tone('sine', 740, 740, 0.15, 0.12); this.tone('sine', 1110, 1110, 0.2, 0.12, 0.12); },
+  yeet() { this.nz(0.32, 'lowpass', 2200, 180, 0.75, 0, 0.55); this.tone('sine', 240, 70, 0.45, 0.32); this.tone('triangle', 720, 160, 0.28, 0.14); },
 };
 
 // ================= game state =================
@@ -513,15 +535,15 @@ const G = {
   egoD: laneC(1), tgtD: laneC(1), egoVd: 0, yaw: 0, jumpT: -1, jumpH: 0, rsT: 0, charges: 0, cool: 0,
   crashT: 0, spin: 0, spinV: 0, shake: 0, nextPickup: 600, pickupOn: false, pkS: 0, pkD: 0, camD: laneC(1), auto: AUTO, tgtMph: 70, minRatio: 9, rearHits: 0, simT: 0, tf: 0, bore: { x: 0, y: 0, roll: 0, floor: true },
 };
-let cars = [];
+let cars = [], flyers = [];
 let best = +localStorage.getItem('fsdmm_best') || 0;
 $('best0').textContent = best.toLocaleString();
 { const r = document.createElement('div'); r.id = 'rev'; r.textContent = REV; document.body.appendChild(r); }
 const egoDims = () => roadster.visible ? { L: 4.1, Wd: 2.02 } : { L: 4.7, Wd: 1.88 };
 
 function reset() {
-  for (const c of cars) freeVehicle(c.mesh); cars = [];
-  Object.assign(G, { cop: null, speedT: 0, copAt: rnd(3, 6), copCd: 0, copWrecks: 0, copEscapes: 0, busted: false, cloud: null, cloudOn: false, cloudNext: 0, clouds: 0, cutIns: 0, hardBrake: false, brakeVis: 0, roofLands: 0, vy: 0, onRoof: null, boost: 0, pitch: 0, passPts: 0, wall: 0, tgtMph: limitAt(S), minRatio: 9, rearHits: 0, t: 0, v: limitAt(S) * MPH, mph: 70, topMph: 70, dist: 0, passed: 0, near: 0, jumps: 0, score: 0, egoD: laneC(1), tgtD: laneC(1), egoVd: 0, yaw: 0, jumpT: -1, jumpH: 0, rsT: 0, charges: 0, cool: 0, crashT: 0, spin: 0, spinV: 0, shake: 0, pickupOn: false, camD: laneC(1) });
+  for (const c of cars) freeVehicle(c.mesh); cars = []; clearFlyers();
+  Object.assign(G, { cop: null, speedT: 0, copAt: rnd(3, 6), copCd: 0, copWrecks: 0, copEscapes: 0, busted: false, cloud: null, cloudOn: false, cloudNext: 0, clouds: 0, cutIns: 0, hardBrake: false, brakeVis: 0, roofLands: 0, vy: 0, onRoof: null, boost: 0, pitch: 0, passPts: 0, wall: 0, yeets: 0, tgtMph: limitAt(S), minRatio: 9, rearHits: 0, t: 0, v: limitAt(S) * MPH, mph: 70, topMph: 70, dist: 0, passed: 0, near: 0, jumps: 0, score: 0, egoD: laneC(1), tgtD: laneC(1), egoVd: 0, yaw: 0, jumpT: -1, jumpH: 0, rsT: 0, charges: 0, cool: 0, crashT: 0, spin: 0, spinV: 0, shake: 0, pickupOn: false, camD: laneC(1) });
   G.nextPickup = S + 500; setRoadster(false);
   for (let i = 0; i < 9; i++) spawnCar(S + 60 + i * 42 + rnd(0, 20));
 }
@@ -533,12 +555,14 @@ function spawnCar(sPos, avoidEgo = false) {
   for (const c of cars) { if (Math.abs(c.s - sPos) < 34 * spaceF() + c.L / 2) { occ.add(c.lane); if (c.lc) occ.add(c.lc.to); if (c.lane === lane) return false; } }
   if (!occ.has(lane) && occ.size >= n - 1) return false;
   if (avoidEgo && Math.abs(laneC(lane) - G.egoD) < 3.2) return false;
-  let r = Math.random(), type = 'sedan'; for (const [k, w] of TYPE_W) { if ((r -= w) < 0) { type = k; break; } }
+  let type = 'sedan';
+  if (cars.length >= 3 && !cars.some(c => c.type === 'moto' && !c.downed)) type = 'moto';
+  else { let r = Math.random(); for (const [k, w] of TYPE_W) { if ((r -= w) < 0) { type = k; break; } } }
   const T = TYPES[type], m = getVehicle(type);
-  m.userData.bodyMat.color.setHex(GREY);
+  m.userData.bodyMat.color.setHex(type === 'moto' ? 0x3a3e44 : GREY);
   const k = Math.floor(sPos / SEG), u = sPos - k * SEG;
-  const over = type === 'semi' || type === 'box' || type === 'bus' ? rnd(0, 4) : rnd(0, 8);
-  const c = { type, mesh: m, s: sPos, lane, d: laneC(lane), L: T.L, Wd: T.Wd, H: T.H, over, v0: (limitAt(sPos) + over) * MPH, v: 0, lc: null, lcTimer: rnd(1, 6), passed: false, exiting: segType(k) === 2 && lane === 3 && u < EXIT_U, braking: false, yaw: 0, jumped: false };
+  const over = diversifyOver(type, sPos, lane, cars, Math.random);
+  const c = { type, mesh: m, s: sPos, lane, d: laneC(lane), L: T.L, Wd: T.Wd, H: T.H, over, v0: (limitAt(sPos) + over) * MPH, v: 0, lc: null, lcTimer: rnd(1, 6), passed: false, exiting: segType(k) === 2 && lane === 3 && u < EXIT_U, braking: false, yaw: 0, jumped: false, opening: false };
   c.v = c.v0; cars.push(c); return true;
 }
 const laneFree = (lane, s, me, gap) => !cars.some(o => o !== me && (o.lane === lane || (o.lc && o.lc.to === lane)) && Math.abs(o.s - s) < gap + (o.L + me.L) / 2);
@@ -628,56 +652,83 @@ function updateTraffic(dt) {
   if (cars.length < target) { if (G.v < 33.5 && Math.random() < 0.35) spawnCar(S - rnd(70, 110), true); else spawnCar(S + rnd(330, 420)); }
   const blinkOn = (performance.now() % 700) < 380;
   const egoOnFloor = G.bore.floor && G.jumpH < 0.6;
+  // A full-width clump with one shared speed never opens a gap. Snap each lane to its own cruise.
+  if (G.state === 'play') {
+    for (const p of blockingPacks(cars, laneN)) shearPack(p, { now: performance.now(), limitMph: limitAt(p[0].s), playerS: S, playerD: G.egoD, playerV: G.v });
+  }
   for (const c of cars) {
-    const lim = limitAt(c.s) * MPH; c.v0 = lim + c.over * MPH;
-    // follow leader (other cars, and the player when directly ahead)
-    let lead = null, gap = 1e9, leadV = 0, leadL = 0;
-    for (const o of cars) { if (o === c) continue; const dl = o.s - c.s; if (dl > 0 && dl < gap && (o.lane === c.lane || (o.lc && o.lc.to === c.lane) || Math.abs(o.d - c.d) < 2.2)) { gap = dl; lead = o; leadV = o.v; leadL = o.L; } }
-    const de = S - c.s; let egoLead = false;
-    if (egoOnFloor && de > 0 && de < gap && Math.abs(G.egoD - c.d) < 2.6) { gap = de; leadV = G.v; leadL = egoDims().L; egoLead = true; }
-    let vt = c.v0; const clear = gap - (c.L + leadL) / 2;
-    if (gap < 1e8 && clear < (egoLead ? 30 : 22)) vt = Math.min(vt, leadV - (clear < 10 ? 3 : 0));
-    if (!egoLead) vt = Math.max(vt, lim); // never below the limit unless the player is in front
-    else if (clear < 6) vt = Math.min(vt, G.v - 2);
-    c.braking = vt < c.v - 0.5; c.v += clamp(vt - c.v, (egoLead ? -14 : -7) * dt, 3 * dt); c.s += c.v * dt - Math.max(0, G.v - c.v) * (EXF - 1) * dt;
-    if (egoLead && c.lcTimer > 1.2) c.lcTimer = 1.2; // try to get around the player
-    // lane changes
-    const nF = Math.floor(laneN(c.s + 90) + 0.02);
-    const egoNear = to => egoOnFloor && Math.abs(G.egoD - laneC(to)) < 3.0 && c.s - S < 14 && c.s - S > -16;
-    if (!c.lc && !c.exiting && !tunnelAt(c.s + 40)) {
-      c.lcTimer -= dt;
-      const forced = c.lane >= nF;
-      if (forced || (c.lcTimer < 0 && (clear < 30 || Math.random() < 0.3))) {
-        c.lcTimer = rnd(3, 9);
-        const dirs = forced ? [-1] : (Math.random() < 0.5 ? [-1, 1] : [1, -1]);
-        for (const dd of dirs) { const to = c.lane + dd; if (to < 0 || to >= Math.min(nF, Math.floor(laneN(c.s) + 0.02))) continue; if (!laneFree(to, c.s, c, 10)) continue;
-          if (egoNear(to)) continue;
-          c.lc = { from: c.lane, to, t: 0, blink: forced ? 1.0 : 1.2 }; break; }
+    if (c.downed) {
+      c.v = Math.max(0, c.v - 16 * dt);
+      c.s += c.v * dt - Math.max(0, G.v - c.v) * (EXF - 1) * dt;
+      c.fall = Math.min(1.25, (c.fall || 0) + dt * 2.6);
+      c.tumble = (c.tumble || 0) + dt * (c.tumbleV || 0);
+      c.lc = null; c.braking = c.v > 2;
+    } else {
+      const lim = limitAt(c.s) * MPH; c.v0 = lim + c.over * MPH;
+      // Same-lane follow only. A car merely alongside must not copy that car's speed,
+      // or a lane change welds the pack into one velocity forever.
+      let gap = 1e9, leadV = 0, leadL = 0, beside = false;
+      for (const o of cars) {
+        if (o === c || o.downed) continue;
+        const dl = o.s - c.s;
+        if (dl <= 0.05 || dl >= gap) continue;
+        const same = o.lane === c.lane || (o.lc && o.lc.to === c.lane) || (c.lc && c.lc.to === o.lane);
+        const lat = Math.abs(o.d - c.d) < (o.Wd + c.Wd) * 0.42 + 0.35;
+        if (!same && !lat) continue;
+        gap = dl; leadV = o.v; leadL = o.L; beside = !same;
       }
+      const de = S - c.s; let egoLead = false;
+      if (egoOnFloor && de > 0.05 && de < gap && Math.abs(G.egoD - c.d) < 2.6) { gap = de; leadV = G.v; leadL = egoDims().L; egoLead = true; beside = false; }
+      const clear = gap < 1e8 ? gap - (c.L + leadL) / 2 : Infinity;
+      const fol = followSpeed({ cruise: c.v0, lim, clear, leadV, egoLead, opening: !!c.opening, beside, moto: c.type === 'moto' });
+      c.opening = fol.opening;
+      const vt = fol.vt;
+      c.braking = vt < c.v - 0.5; c.v += clamp(vt - c.v, (egoLead ? -14 : -10) * dt, 4 * dt); c.s += c.v * dt - Math.max(0, G.v - c.v) * (EXF - 1) * dt;
+      if (egoLead && c.lcTimer > 1.2) c.lcTimer = 1.2; // try to get around the player
+      // lane changes
+      const nF = Math.floor(laneN(c.s + 90) + 0.02);
+      const egoNear = to => egoOnFloor && Math.abs(G.egoD - laneC(to)) < 3.0 && c.s - S < 14 && c.s - S > -16;
+      if (!c.lc && !c.exiting && !tunnelAt(c.s + 40)) {
+        c.lcTimer -= dt;
+        const forced = c.lane >= nF;
+        if (forced || (c.lcTimer < 0 && (clear < 30 || Math.random() < 0.3))) {
+          c.lcTimer = rnd(3, 9);
+          const dirs = forced ? [-1] : (Math.random() < 0.5 ? [-1, 1] : [1, -1]);
+          for (const dd of dirs) { const to = c.lane + dd; if (to < 0 || to >= Math.min(nF, Math.floor(laneN(c.s) + 0.02))) continue; if (!laneFree(to, c.s, c, 10)) continue;
+            if (egoNear(to)) continue;
+            c.lc = { from: c.lane, to, t: 0, blink: forced ? 1.0 : 1.2 }; break; }
+        }
+      }
+      // occasional signalled cut-in in front of the player (18-40 m ahead, adjacent lane)
+      if (G.state === 'play' && !c.lc && !c.exiting && egoOnFloor && !tunnelAt(c.s) && c.s - S > 22 && c.s - S < 60 && c.v < G.v && (c.s - S - c.L) / Math.max(0.1, (G.v - c.v) * exagF()) > 3.2) {
+        const egoLane = clamp(Math.round(G.egoD / W - 0.5), 0, Math.floor(laneN(S) + 0.02) - 1);
+        if (Math.abs(c.lane - egoLane) === 1 && Math.abs(G.egoD - laneC(egoLane)) < 1.2 && Math.random() < CUT[SET.difficulty] * dt && laneFree(egoLane, c.s, c, 10)) { c.lc = { from: c.lane, to: egoLane, t: 0, blink: 1.6, cut: true }; G.cutIns++; }
+      }
+      if (c.lc && c.lc.cut && c.lc.t < c.lc.blink && (c.s - S - c.L) / Math.max(0.1, (G.v - c.v) * exagF()) < 2.5) c.lc = null; // player closing in: abort
+      if (c.lc && !c.lc.cut && c.lc.t < c.lc.blink && egoNear(c.lc.to)) { c.lc.hold = (c.lc.hold || 0) + dt; c.lc.t = Math.min(c.lc.t, c.lc.blink - 0.05); if (c.lc.hold > 3) { c.lc = null; } }
+      if (c.lc) { c.lc.t += dt; const mt = clamp((c.lc.t - c.lc.blink) / 2.0, 0, 1); const e = sstep(0, 1, mt), nd = lerp(laneC(c.lc.from), laneC(c.lc.to), e);
+        c.yaw = (nd - c.d) / Math.max(1, c.v * dt) ; c.d = nd; if (mt >= 1) { c.lane = c.lc.to; c.lc = null; c.yaw = 0; } }
+      else if (c.exiting) { const t = rampT(c.s); c.d = t >= 0 ? rampL(t) + W / 2 : laneC(c.lane); c.yaw = 0; }
     }
-    // occasional signalled cut-in in front of the player (18-40 m ahead, adjacent lane)
-    if (G.state === 'play' && !c.lc && !c.exiting && egoOnFloor && !tunnelAt(c.s) && c.s - S > 22 && c.s - S < 60 && c.v < G.v && (c.s - S - c.L) / Math.max(0.1, (G.v - c.v) * exagF()) > 3.2) {
-      const egoLane = clamp(Math.round(G.egoD / W - 0.5), 0, Math.floor(laneN(S) + 0.02) - 1);
-      if (Math.abs(c.lane - egoLane) === 1 && Math.abs(G.egoD - laneC(egoLane)) < 1.2 && Math.random() < CUT[SET.difficulty] * dt && laneFree(egoLane, c.s, c, 10)) { c.lc = { from: c.lane, to: egoLane, t: 0, blink: 1.6, cut: true }; G.cutIns++; }
-    }
-    if (c.lc && c.lc.cut && c.lc.t < c.lc.blink && (c.s - S - c.L) / Math.max(0.1, (G.v - c.v) * exagF()) < 2.5) c.lc = null; // player closing in: abort
-    if (c.lc && !c.lc.cut && c.lc.t < c.lc.blink && egoNear(c.lc.to)) { c.lc.hold = (c.lc.hold || 0) + dt; c.lc.t = Math.min(c.lc.t, c.lc.blink - 0.05); if (c.lc.hold > 3) { c.lc = null; } }
-    if (c.lc) { c.lc.t += dt; const mt = clamp((c.lc.t - c.lc.blink) / 2.0, 0, 1); const e = sstep(0, 1, mt), nd = lerp(laneC(c.lc.from), laneC(c.lc.to), e);
-      c.yaw = (nd - c.d) / Math.max(1, c.v * dt) ; c.d = nd; if (mt >= 1) { c.lane = c.lc.to; c.lc = null; c.yaw = 0; } }
-    else if (c.exiting) { const t = rampT(c.s); c.d = t >= 0 ? rampL(t) + W / 2 : laneC(c.lane); c.yaw = 0; }
     // render
     const m = c.mesh, rt = c.exiting ? rampT(c.s) : -1;
     P(c.s, c.d, m.position); if (rt >= 0) m.position.y += rampDrop(rt) + 0.012;
     const yawRamp = rt >= 0 ? (58 * 1.7 * Math.pow(Math.max(rt, 1e-3), 0.7) / RAMP_LEN) : 0;
-    m.rotation.set(Math.atan(slopeY(c.s)), -Math.atan(slopeX(c.s) + clamp(c.yaw, -0.3, 0.3) + yawRamp), -bank(c.s));
+    const fall = c.downed ? Math.min(1.15, c.fall || 0) : 0;
+    m.rotation.set(Math.atan(slopeY(c.s)) + fall * 0.35, -Math.atan(slopeX(c.s) + clamp(c.yaw, -0.3, 0.3) + yawRamp) + (c.downed ? c.tumble || 0 : 0), -bank(c.s) + (c.downed ? (c.fallDir || 1) * fall : 0));
     const bl = m.userData.blink; const side = c.lc ? (c.lc.to > c.lc.from ? 1 : 0) : -1;
     for (let s2 = 0; s2 < 2; s2++) for (const x of bl[s2]) x.visible = side === s2 && blinkOn;
     for (const b of m.userData.brake) b.material = c.braking ? brakeMat : tailDimMat;
   }
-  // in-path vehicle tint (FSD shows the lead car in your path in blue)
+  // in-path vehicle tint (FSD shows the lead car in your path in blue). Bikes stay dark so the rider reads.
   let lead = null, lg = 70;
-  for (const c of cars) { const ds = c.s - S; if (ds > 2 && ds < lg && Math.abs(c.d - G.egoD) < 1.7) { lg = ds; lead = c; } }
-  for (const c of cars) { const col = c.mesh.userData.bodyMat.color; if (c === lead) col.lerp(_blue, 0.15); else col.lerp(_grey, 0.15); }
+  for (const c of cars) { if (c.downed) continue; const ds = c.s - S; if (ds > 2 && ds < lg && Math.abs(c.d - G.egoD) < 1.7) { lg = ds; lead = c; } }
+  for (const c of cars) {
+    const col = c.mesh.userData.bodyMat.color;
+    if (c.type === 'moto') col.setHex(c === lead ? 0x9ebcf2 : 0x3a3e44);
+    else if (c === lead) col.lerp(_blue, 0.15);
+    else col.lerp(_grey, 0.15);
+  }
   // despawn
   for (let i = cars.length - 1; i >= 0; i--) { const c = cars[i]; if (c.s < S - 45 || c.s > S + 520 || (c.exiting && rampT(c.s) > 0.95)) { freeVehicle(c.mesh); cars.splice(i, 1); } }
 }
@@ -714,6 +765,73 @@ function onPass() { const got = Unlocks.addPass(); $('goal').textContent = goalT
     banner2(id === 'roadster' ? 'ROADSTER UNLOCKED' : 'TUNNELS UNLOCKED', id === 'roadster' ? 'Grab the spinning badge on the road' : 'Tunnels appear from your next drive'); } }
 function banner2(t, sub) { const el = $('unlockBan'); el.innerHTML = `<b>${t}</b><small>${sub}</small>`; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); sfx.chime(); if (navigator.vibrate) navigator.vibrate([40, 30, 40]); clearTimeout(banner2.t); banner2.t = setTimeout(() => el.classList.remove('show'), 2600); }
 function renderCharges() { $('charges').innerHTML = [0, 1, 2].map(i => `<i class="${i < G.charges ? '' : 'off'}"></i>`).join(''); }
+function sideswipe(c) {
+  if (c.downed || c.type !== 'moto') return;
+  let dir = Math.sign(c.d - G.egoD);
+  if (!dir) dir = Math.sign(-G.egoVd) || (Math.random() < 0.5 ? -1 : 1);
+  c.downed = true; c.fall = 0; c.fallDir = dir; c.tumble = 0; c.tumbleV = dir * rnd(5, 9);
+  c.v *= 0.4; c.over = -14; c.lc = null; c.yaw = dir * 0.6;
+  c.mesh.traverse(m => { if (m.userData && m.userData.rider) m.visible = false; });
+  launchFlyer(c, dir);
+  G.yeets = (G.yeets || 0) + 1; G.shake = 0.55;
+  toast('SIDESWIPE +250<small>Rider\'s gone flying</small>', 1100); sfx.yeet();
+  for (let i = 0; i < 26; i++) emit(c.s, c.d + dir * 0.4, 0.9, c.v * 0.3, dir * rnd(4, 14), rnd(3, 10), rnd(0.35, 0.8), 0.35, rnd(1.6, 4), 0.85, i % 2 ? 0xfff2e0 : 0xd24a22);
+}
+const flyerMats = {
+  jacket: new THREE.MeshStandardMaterial({ color: 0xd24a22, roughness: 0.6, emissive: 0x4a1408, emissiveIntensity: 0.4 }),
+  pants: new THREE.MeshStandardMaterial({ color: 0x23262b, roughness: 0.8 }),
+  helmet: new THREE.MeshStandardMaterial({ color: 0xf4f5f7, roughness: 0.25, metalness: 0.2 }),
+  visor: new THREE.MeshStandardMaterial({ color: 0x101216, roughness: 0.08, metalness: 0.55 }),
+};
+const flyerPool = [];
+function buildFlyer() {
+  const g = new THREE.Group(); g.rotation.order = 'YXZ'; g.frustumCulled = false;
+  const cap = (r, len, mat, x, y, z, rx = 0, rz = 0) => {
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 3, 8), mat);
+    m.position.set(x, y, z); m.rotation.set(rx, 0, rz); m.castShadow = true; g.add(m);
+  };
+  cap(0.18, 0.38, flyerMats.jacket, 0, 0.15, 0, 0.4, 0);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), flyerMats.helmet);
+  head.position.set(0, 0.58, 0.08); head.castShadow = true; g.add(head);
+  const vis = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), flyerMats.visor);
+  vis.scale.set(1.1, 0.7, 0.5); vis.position.set(0, 0.56, -0.02); g.add(vis);
+  cap(0.055, 0.36, flyerMats.jacket, -0.34, 0.22, 0.02, 0.2, 1.1);
+  cap(0.055, 0.36, flyerMats.jacket, 0.36, 0.18, -0.08, -0.7, -0.9);
+  cap(0.075, 0.36, flyerMats.pants, -0.12, -0.38, 0.06, 0.5, 0.25);
+  cap(0.075, 0.36, flyerMats.pants, 0.16, -0.42, -0.1, -0.4, -0.35);
+  return g;
+}
+function acquireFlyer() { const g = flyerPool.pop() || buildFlyer(); g.visible = true; scene.add(g); return g; }
+function releaseFlyer(g) { g.visible = false; scene.remove(g); flyerPool.push(g); }
+function clearFlyers() { for (const f of flyers) releaseFlyer(f.mesh); flyers = []; }
+function launchFlyer(c, dir) {
+  const mesh = acquireFlyer();
+  flyers.push({
+    mesh, s: c.s, d: c.d, h: 1.15, age: 0, bounces: 0,
+    vs: c.v * 0.45 + rnd(4, 9), vd: dir * rnd(18, 26), vh: rnd(14, 18),
+    rx: -1.1, ry: rnd(-0.4, 0.4), rz: dir * 0.7,
+    vrx: rnd(-8, 8), vry: rnd(-3, 3), vrz: dir * rnd(8, 14),
+  });
+}
+function updateFlyers(dt) {
+  const g = 11;
+  for (let i = flyers.length - 1; i >= 0; i--) {
+    const f = flyers[i];
+    f.age += dt; f.vh -= g * dt; f.s += f.vs * dt; f.d += f.vd * dt; f.h += f.vh * dt;
+    if (f.age < 0.5) emit(f.s, f.d, f.h, f.vs * 0.15, f.vd * 0.15, 0, 0.28, 0.2, 1.1, 0.55, 0xffe2c4);
+    if (f.h <= 0.15) {
+      f.h = 0.15;
+      if (f.vh < 0) {
+        f.bounces++; f.vh = Math.abs(f.vh) * 0.38; f.vd *= 0.55; f.vrz *= 0.45; f.vs *= 0.7;
+        if (f.bounces === 1) for (let k = 0; k < 8; k++) emit(f.s, f.d, 0.3, f.vs, rnd(-3, 3), rnd(0.4, 2), 0.35, 0.25, 1.4, 0.55, 0xdedad4);
+      }
+    }
+    f.rx += f.vrx * dt; f.ry += f.vry * dt; f.rz += f.vrz * dt;
+    P(f.s, f.d, f.mesh.position); f.mesh.position.y += f.h;
+    f.mesh.rotation.set(f.rx, -Math.atan(slopeX(f.s)) + f.ry, f.rz);
+    if (f.age > 3.6 || (f.bounces >= 3 && f.age > 1.5) || f.s < S - 40) { releaseFlyer(f.mesh); flyers.splice(i, 1); }
+  }
+}
 function crash(other) { G.crashCut = (G.crashCut || 0) + (other && other.lc && other.lc.cut ? 1 : 0); G.crashN = (G.crashN || 0) + 1;
   if (G.state !== 'play') return;
   G.state = 'crash'; G.crashT = 0; G.spinV = (Math.random() < 0.5 ? -1 : 1) * rnd(3, 5); G.shake = 1.2; sfx.crash();
@@ -893,8 +1011,12 @@ function step(dt) {
   const ed = egoDims();
   for (const c of cars) {
     const ds = c.s - S, dd = Math.abs(c.d - G.egoD);
-    const overlap = !c.exiting && G.bore.floor && !(c === G.lastRoof && (G.jumpT >= 0 || c.s < S)) && Math.abs(ds) < (c.L + ed.L) / 2 * 0.93 && dd < (c.Wd + ed.Wd) / 2 * 0.86;
-    if (overlap && G.jumpH <= c.H - 0.25 && ds < -(c.L + ed.L) / 2 * 0.55 && c.v >= G.v - 0.5) { G.rearHits++; c.s = S - (c.L + ed.L) / 2 - 0.5; c.v = Math.min(c.v, G.v - 3); }
+    const overlap = !c.exiting && !c.downed && G.bore.floor && !(c === G.lastRoof && (G.jumpT >= 0 || c.s < S)) && Math.abs(ds) < (c.L + ed.L) / 2 * 0.93 && dd < (c.Wd + ed.Wd) / 2 * 0.86;
+    const rearEnded = overlap && G.jumpH <= c.H - 0.25 && ds < -(c.L + ed.L) / 2 * 0.55 && c.v >= G.v - 0.5;
+    // Any player-caused hit on a bike launches the rider. A bike running into the rear bumper is still just a shove.
+    const swipeMoto = overlap && playing && !GOD && c.type === 'moto' && !rearEnded && G.jumpH <= c.H - 0.25;
+    if (swipeMoto) sideswipe(c);
+    else if (rearEnded) { G.rearHits++; c.s = S - (c.L + ed.L) / 2 - 0.5; c.v = Math.min(c.v, G.v - 3); }
     else if (overlap && playing && !GOD) {
       if (G.jumpH > c.H - 0.25) { if (!c.jumped) { c.jumped = true; G.jumps++; } } else { crash(c); }
     }
@@ -908,7 +1030,7 @@ function step(dt) {
       if (dd < 6) sfx.whoosh(clamp((c.d - G.egoD) / 5, -1, 1), c.type === 'semi' || c.type === 'box' ? 0.35 : 0.22);
     }
   }
-  G.score = Math.floor(G.dist / 10) + G.passPts + G.copWrecks * 1500 + G.copEscapes * 800 + G.roofLands * 200 + G.near * 100 + G.jumps * 150 + G.wall * 50;
+  G.score = Math.floor(G.dist / 10) + G.passPts + G.copWrecks * 1500 + G.copEscapes * 800 + G.roofLands * 200 + G.near * 100 + G.jumps * 150 + G.wall * 50 + (G.yeets || 0) * 250;
   if (G.state === 'crash') { G.crashT += dt; if (G.wWord && !G.wShown && G.crashT > 0.14) { G.wShown = true; showWasted(G.wWord); } if (G.crashT > 1.05) gameOver(); }
   if (G.state === 'crash' || G.state === 'over') { G.spin += G.spinV * dt; G.spinV *= Math.exp(-dt * 1.6); }
   // ego transform
@@ -921,7 +1043,7 @@ function step(dt) {
   tailMat.color.setRGB(lerp(0.55, 1, G.brakeVis), lerp(0.04, 0.22, G.brakeVis), lerp(0.04, 0.18, G.brakeVis)); for (const t of tailBits) t.scale.y = lerp(0.07, 0.12, G.brakeVis);
   nozzleMat.color.setHex(G.jumpT >= 0 && G.jumpT < 0.5 ? 0xffffff : 0x6fb6e8);
   // particles / road
-  updateParts(dt); updateRoad(); updateOverpasses(); updateTunnel();
+  updateParts(dt); updateFlyers(dt); updateRoad(); updateOverpasses(); updateTunnel();
   updatePath(G.egoD, tb ? clamp(G.tgtD, DMID - HALF + 1, DMID + HALF - 1) : G.tgtD, G.state === 'play' && G.jumpT < 0 && G.bore.floor && Math.abs(G.egoD - DMID) < HALF - 0.8, clamp(110 + G.v * 0.6, 110, 170));
   // camera
   G.camD = lerp(G.camD, G.egoD, 1 - Math.exp(-dt * 4));
@@ -1065,4 +1187,34 @@ if (qs.has('tune')) { // live tuning overlay
 }
 // ---- test / debug hooks ----
 if (qs.has('test') || qs.has('cheat')) window.FSDchase = () => { setRoadster(true); G.rsT = Math.max(G.rsT, 20); G.copCd = 0; G.copAt = 0; G.speedT = 99; if (G.v < 50) G.v = 60; };
-if (qs.has('test')) window.FSD = { G, clear: () => { for (const c of cars) freeVehicle(c.mesh); cars = []; }, gallery: (types, gap = 9) => { for (const c of cars) freeVehicle(c.mesh); cars = []; types.forEach((t, i) => { const T = TYPES[t], m = getVehicle(t), lane = i % 2 ? 2 : 0; const c = { type: t, mesh: m, s: S + 10 + Math.floor(i / 2) * gap + (i % 2) * 3, lane, d: laneC(lane), L: T.L, Wd: T.Wd, H: T.H, over: 0, v0: G.v, v: G.v, lc: null, lcTimer: 99, passed: false, exiting: false, braking: false, yaw: 0, jumped: false }; c.over = G.v / MPH - limitAt(S); cars.push(c); }); }, hud: () => { hudT = 0; hud(0.001); }, semiAhead: () => { for (const c of cars) freeVehicle(c.mesh); cars = []; const m = getVehicle('semi'), T = TYPES.semi; const rel = G.v - 32; const c = { type: 'semi', mesh: m, s: S + T.L / 2 + 2.4 + rel * 0.7, lane: Math.round(G.egoD / W - 0.5), d: G.egoD, L: T.L, Wd: T.Wd, H: T.H, over: 0, v0: 32, v: 32, lc: null, lcTimer: 99, passed: false, exiting: false, braking: false, yaw: 0, jumped: false }; c.over = 32 / MPH - limitAt(S); cars.push(c); return c; }, sim: (sec) => { const n = Math.round(sec * 60); for (let i = 0; i < n; i++) step(1 / 60); }, tunnel: () => FSD.warp(FSD.findSeg(3) + T0 + 40), drag: (x0, y0, x1, y1) => { const ev = (t, x, y) => canvas.dispatchEvent(new PointerEvent(t, { pointerId: 7, clientX: x, clientY: y, bubbles: true })); ev('pointerdown', x0, y0); for (let i = 1; i <= 10; i++) ev('pointermove', lerp(x0, x1, i / 10), lerp(y0, y1, i / 10)); ev('pointerup', x1, y1); }, start, toPark, openSettings, exagF, spaceF, openLB, run: () => run, copNow: () => { G.speedT = 99; G.copAt = 0; G.copCd = 0; }, cloudNow: () => { G.cloudNext = 0; }, unlocks: Unlocks, fire, crash: () => crash(cars[0]), roadster: () => { G.rsT = 12; G.charges = 3; setRoadster(true); G.tgtMph = Math.max(G.tgtMph, spdLo()); renderCharges(); }, setAuto: b => { G.auto = b; }, warp: s => { S = s; for (const c of cars) freeVehicle(c.mesh); cars = []; }, get S() { return S; }, cars: () => cars, findSeg: (t, ov) => { for (let k = 1; k < 200; k++) if (segType(k) === t && (!ov || hasOverpass(k))) return k * SEG; return 0; }, noAdapt: () => { pr = 1; resize(); fpsAcc = -1e9; } };
+if (qs.has('test')) window.FSD = { G, clear: () => { for (const c of cars) freeVehicle(c.mesh); cars = []; clearFlyers(); }, gallery: (types, gap = 9) => { for (const c of cars) freeVehicle(c.mesh); cars = []; types.forEach((t, i) => { const T = TYPES[t], m = getVehicle(t), lane = i % 2 ? 2 : 0; const c = { type: t, mesh: m, s: S + 10 + Math.floor(i / 2) * gap + (i % 2) * 3, lane, d: laneC(lane), L: T.L, Wd: T.Wd, H: T.H, over: 0, v0: G.v, v: G.v, lc: null, lcTimer: 99, passed: false, exiting: false, braking: false, yaw: 0, jumped: false }; c.over = G.v / MPH - limitAt(S); cars.push(c); }); }, hud: () => { hudT = 0; hud(0.001); }, semiAhead: () => { for (const c of cars) freeVehicle(c.mesh); cars = []; const m = getVehicle('semi'), T = TYPES.semi; const rel = G.v - 32; const c = { type: 'semi', mesh: m, s: S + T.L / 2 + 2.4 + rel * 0.7, lane: Math.round(G.egoD / W - 0.5), d: G.egoD, L: T.L, Wd: T.Wd, H: T.H, over: 0, v0: 32, v: 32, lc: null, lcTimer: 99, passed: false, exiting: false, braking: false, yaw: 0, jumped: false }; c.over = 32 / MPH - limitAt(S); cars.push(c); return c; }, sim: (sec) => { const n = Math.round(sec * 60), was = paused; paused = false; for (let i = 0; i < n; i++) step(1 / 60); paused = was; }, tunnel: () => FSD.warp(FSD.findSeg(3) + T0 + 40), drag: (x0, y0, x1, y1) => { const ev = (t, x, y) => canvas.dispatchEvent(new PointerEvent(t, { pointerId: 7, clientX: x, clientY: y, bubbles: true })); ev('pointerdown', x0, y0); for (let i = 1; i <= 10; i++) ev('pointermove', lerp(x0, x1, i / 10), lerp(y0, y1, i / 10)); ev('pointerup', x1, y1); }, start, toPark, openSettings, exagF, spaceF, openLB, run: () => run, copNow: () => { G.speedT = 99; G.copAt = 0; G.copCd = 0; }, cloudNow: () => { G.cloudNext = 0; }, unlocks: Unlocks, fire, crash: () => crash(cars[0]), roadster: () => { G.rsT = 12; G.charges = 3; setRoadster(true); G.tgtMph = Math.max(G.tgtMph, spdLo()); renderCharges(); }, setAuto: b => { G.auto = b; }, warp: s => { S = s; for (const c of cars) freeVehicle(c.mesh); cars = []; }, get S() { return S; }, cars: () => cars, findSeg: (t, ov) => { for (let k = 1; k < 200; k++) if (segType(k) === t && (!ov || hasOverpass(k))) return k * SEG; return 0; }, noAdapt: () => { pr = 1; resize(); fpsAcc = -1e9; } };
+if (qs.has('test')) Object.assign(window.FSD, {
+  place(type, o = {}) {
+    const T = TYPES[type], m = getVehicle(type);
+    const s = o.s != null ? o.s : S + 12, lane = o.lane != null ? o.lane : 1, d = o.d != null ? o.d : laneC(lane);
+    const v = o.v != null ? o.v : G.v, over = v / MPH - limitAt(s);
+    const c = { type, mesh: m, s, lane, d, L: T.L, Wd: T.Wd, H: T.H, over, v0: v, v, lc: null, lcTimer: o.lcTimer != null ? o.lcTimer : 99, passed: false, exiting: false, braking: false, yaw: 0, jumped: false, opening: false, tag: o.tag || '' };
+    cars.push(c);
+    return { type, s: c.s, d: c.d, lane, v: c.v, tag: c.tag };
+  },
+  wall() {
+    for (const c of cars) freeVehicle(c.mesh); cars = [];
+    const base = S + 46, lim = limitAt(base), v = (lim + 1) * MPH;
+    for (let lane = 0; lane < 3; lane++) FSD.place('sedan', { s: base, lane, v, lcTimer: 99, tag: 'wall' });
+    return FSD.snap().cars.filter(c => c.tag === 'wall');
+  },
+  freeze(on = true) { paused = !!on; },
+  snap() {
+    const packs = blockingPacks(cars, laneN).map(p => {
+      const mph = p.map(c => c.v / MPH);
+      return { n: p.length, lanes: [...new Set(p.map(c => c.lane))], spread: Math.max(...mph) - Math.min(...mph) };
+    });
+    return {
+      state: G.state, yeets: G.yeets || 0, s: S, v: G.v, egoD: G.egoD, rev: REV,
+      cars: cars.map(c => ({ type: c.type, s: +c.s.toFixed(2), d: +c.d.toFixed(2), lane: c.lane, v: c.v, mph: c.v / MPH, over: c.over, downed: !!c.downed, tag: c.tag || '', rider: riderShown(c) })),
+      flyers: flyers.map(f => ({ s: +f.s.toFixed(2), d: +f.d.toFixed(2), h: +f.h.toFixed(2), age: +f.age.toFixed(2), vd: +f.vd.toFixed(2) })),
+      packs,
+    };
+  },
+});
+function riderShown(c) { let on = false; c.mesh.traverse(m => { if (m.isMesh && m.userData && m.userData.rider && m.visible) on = true; }); return on; }
