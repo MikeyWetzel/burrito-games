@@ -83,8 +83,6 @@
     hits: []
   };
 
-  function $(id) { return document.getElementById(id); }
-
   function cssPx(name) {
     var v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
     return isNaN(v) ? 0 : v;
@@ -625,7 +623,10 @@
         var pos = cellCenter(+parts[0], +parts[1], L);
         Audio.play('on', S.litCount++);
         burst(pos.x, pos.y, 8, ['#fff4c2', '#ffd45a', '#fff'], 60);
-        if (lc) floater(LOAD_QUIP[lc.loadType] || 'Power!', pos.x, pos.y - 8, '#2a2110');
+        if (lc) {
+          var fx = Math.max(56, Math.min(W - 56, pos.x));
+          floater(LOAD_QUIP[lc.loadType] || 'Power!', fx, pos.y - L.cell * 0.62, '#2a2110');
+        }
       }
     });
     power.hot.forEach(function (id) {
@@ -674,8 +675,13 @@
     var sal = cssPx('--sal');
     var sar = cssPx('--sar');
     var trayN = b && b.tray ? b.tray.length : 0;
+    var hasGap = false;
+    if (b) {
+      for (var gi = 0; gi < b.cells.length; gi++) if (b.cells[gi].role === 'gap') hasGap = true;
+    }
+    if (hasGap || (S.pointer && S.pointer.dragPiece)) trayN = Math.max(1, trayN);
     var landscape = W > H;
-    var topH = sat + (landscape ? 60 : Math.max(76, Math.min(112, H * 0.112)));
+    var topH = sat + (landscape ? 68 : Math.max(112, Math.min(132, H * 0.145)));
     var trayH = trayN ? Math.max(76, Math.min(118, H * 0.12)) : 0;
     var statusH = landscape ? 50 : Math.max(64, Math.min(88, H * 0.09));
     var gridTop = topH + 2;
@@ -1737,7 +1743,7 @@
   }
 
   function drawTray(L) {
-    if (!S.board.tray.length && !(S.pointer && S.pointer.dragPiece)) return;
+    if (L.trayH <= 0) return;
     ctx.fillStyle = mix('#6a4a2e', '#8a6240', 0.4);
     roundRect(10, L.trayY + 4, W - 20, L.trayH - 10, 14);
     ctx.fill();
@@ -1986,6 +1992,7 @@
     ctx.fillText('JOB DONE', W / 2, c.y + 68);
     var shown = S.mode === 'clear' ? S.levelStars : 0;
     for (var i = 0; i < 3; i++) drawStar(W / 2 - 48 + i * 48, c.y + 112, 16, i < shown);
+    ctx.fillStyle = '#2a2110';
     ctx.font = '800 16px system-ui, sans-serif';
     ctx.fillText('+' + commas(S.levelGained) + '    TOTAL ' + commas(S.score), W / 2, c.y + 150);
     if (S.lifeBack) {
@@ -2056,9 +2063,9 @@
     sky.addColorStop(1, mix('#243044', '#f0d2a4', bright));
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = 'rgba(255,248,220,' + (0.15 + bright * 0.5) + ')';
+    ctx.fillStyle = 'rgba(255,248,220,' + (0.35 + bright * 0.4) + ')';
     ctx.beginPath();
-    ctx.arc(W * 0.82, H * 0.1, 22, 0, Math.PI * 2);
+    ctx.arc(cssPx('--sal') + 36, cssPx('--sat') + 32, 16, 0, Math.PI * 2);
     ctx.fill();
     var hx = W * 0.5;
     var hy = H * 0.3;
